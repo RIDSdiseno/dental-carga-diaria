@@ -109,6 +109,8 @@ async function main() {
   if (args.resume) {
     if (!fs.existsSync(planPath)) throw new Error(`No existe el plan a reanudar: ${planPath}`);
     plan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+    args.clinics = plan.clinics.length;
+    args.patients = plan.clinics.reduce((n, c) => n + (c.patients || []).length, 0);
     log.info(`Plan reanudado con ${plan.clinics.length} clínicas.`);
   } else {
     const used = usedSets(registry);

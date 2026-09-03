@@ -1,0 +1,21 @@
+{
+  "name": "dental-carga-diaria",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Carga diaria automática de datos demo en DentalCloud (federado a Dental-Demo) a través de la interfaz web con Playwright.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "daily": "node src/run-daily.js",
+    "test-run": "node src/run-daily.js --clinics 1 --patients 10 --tag prueba",
+    "git-sync": "node src/git-sync.js",
+    "report": "node src/report.js"
+  },
+  "dependencies": {
+    "docx": "^9.7.1",
+    "dotenv": "^16.4.5",
+    "playwright": "^1.47.0"
+  }
+}

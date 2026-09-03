@@ -4,6 +4,7 @@ import { openSession } from '../browser.js';
 import * as agenda from '../pages/agenda.js';
 import * as catalogo from '../pages/catalogo.js';
 import * as profesionales from '../pages/profesionales.js';
+import { closeOpenModals } from '../pages/_helpers.js';
 
 /** Ejecuta `fn` para cada item no hecho, registrando éxito/fallo sin detener el flujo. */
 export async function eachItem(items, entity, ctx, fn, refOf = (i) => i.name || i.code || i.key) {
@@ -19,10 +20,13 @@ export async function eachItem(items, entity, ctx, fn, refOf = (i) => i.name || 
       item.done = true;
       ctx.counts[entity].ok += 1;
     } catch (err) {
-      item.error = err.message;
+      const message = String(err.message).split('\n')[0].slice(0, 400);
+      item.error = message;
       ctx.counts[entity].fail += 1;
-      ctx.errors.push({ entity, ref: String(refOf(item) ?? ''), message: err.message });
+      ctx.errors.push({ entity, ref: String(refOf(item) ?? ''), message });
       ctx.log.error(`${entity} "${refOf(item)}" falló: ${err.message}`);
+      // Deja la pantalla limpia (cierra modales abiertos) para que el siguiente ítem no se bloquee.
+      if (ctx.onItemError) await ctx.onItemError().catch(() => undefined);
     }
     ctx.savePlan?.();
   }
@@ -38,6 +42,7 @@ export async function setupClinic(browser, clinic, ctx) {
     log,
   });
   const { page } = session;
+  ctx.onItemError = () => closeOpenModals(page);
   try {
     log.step(`[${clinic.key}] Sillones`);
     await eachItem(clinic.chairs, 'chairs', ctx, (c) => agenda.addChair(page, c, ctx), (c) => `Sillón ${c.number}`);

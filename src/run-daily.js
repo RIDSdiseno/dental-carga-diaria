@@ -51,6 +51,39 @@ function parseArgs(argv) {
   return args;
 }
 
+/**
+ * Conteos reales de una clínica según el estado del plan (marcas done/id), no solo
+ * lo hecho en esta pasada. Así un --resume informa el total acumulado del día.
+ */
+function countsFromPlan(clinic) {
+  const counts = emptyCounts();
+  const tally = (key, items, isOk = (i) => i.done) => {
+    for (const item of items || []) {
+      if (isOk(item)) counts[key].ok += 1;
+      else if (item.error) counts[key].fail += 1;
+    }
+  };
+  counts.holdings[clinic.id ? 'ok' : 'fail'] += 1;
+  counts.federation[clinic.federated ? 'ok' : 'fail'] += clinic.id ? 1 : 0;
+  counts.modules[clinic.modulesDone ? 'ok' : 'fail'] += clinic.id ? 1 : 0;
+  tally('chairs', clinic.chairs);
+  tally('sucursales', clinic.sucursales);
+  tally('previsiones', clinic.previsiones);
+  tally('convenios', clinic.convenios);
+  tally('prestaciones', clinic.prestaciones);
+  tally('users', clinic.users);
+  tally('schedules', clinic.schedules);
+  tally('patients', clinic.patients, (p) => Boolean(p.id));
+  tally('motivos', (clinic.patients || []).filter((p) => p.motivoConsulta), (p) => Boolean(p.motivoDone));
+  tally('appointments', clinic.appointments);
+  tally('treatmentPlans', clinic.treatmentPlans);
+  tally('evolutions', clinic.evolutions);
+  tally('ledger', clinic.ledger);
+  tally('observations', clinic.observations);
+  tally('documents', clinic.documents);
+  return counts;
+}
+
 function chileHHMM(date = new Date()) {
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
 }
@@ -253,6 +286,8 @@ async function main() {
   }
 
   // ---------- Informe ----------
+  // Los totales salen del estado real del plan (acumulado del día), no solo de esta pasada.
+  for (const clinic of plan.clinics) results.get(clinic.key).counts = countsFromPlan(clinic);
   const clinics = [...results.values()];
   const totals = clinics.reduce((acc, r) => mergeCounts(acc, r.counts), emptyCounts());
   const anyErrors = clinics.some((c) => c.errors.length);

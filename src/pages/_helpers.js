@@ -106,6 +106,20 @@ export async function retry(fn, { attempts = 3, delayMs = 1500, log, label = 'ac
   throw lastError;
 }
 
+/**
+ * Cierra cualquier modal que haya quedado abierto tras un error (botón "Cerrar" del
+ * Modal genérico o tecla Escape), para que el siguiente paso no quede bloqueado.
+ */
+export async function closeOpenModals(page) {
+  for (let i = 0; i < 3; i++) {
+    const close = page.locator('button[aria-label="Cerrar"]').last();
+    if (!(await close.isVisible().catch(() => false))) break;
+    await close.click({ timeout: 2000 }).catch(() => undefined);
+    await page.waitForTimeout(200);
+  }
+  await page.keyboard.press('Escape').catch(() => undefined);
+}
+
 /** Extrae el último segmento de la URL actual (normalmente el ID del recurso). */
 export function lastUrlSegment(page) {
   const { pathname } = new URL(page.url());

@@ -513,17 +513,26 @@ function buildTreatmentPlans(ctx, clinic) {
     const items = chosen.map((p) => {
       let teeth = [];
       let surfaces = [];
+      const zones = {};
       if (p.odontogramMode === 'tooth' || p.odontogramMode === 'extraction') {
         teeth = [pickTooth(rng, patient._age, p.odontogramMode)];
       } else if (p.odontogramMode === 'surface') {
         const tooth = pickTooth(rng, patient._age, 'surface');
         teeth = [tooth];
         surfaces = surfacesFor(rng, tooth);
+      } else if (p.odontogramMode === 'cuadrante') {
+        // Cuadrantes 1–4 dentición permanente; 5–8 temporal (niños pequeños).
+        zones.quadrants = [patient._age < 6 ? rng.int(5, 8) : rng.int(1, 4)];
+      } else if (p.odontogramMode === 'sextante') {
+        zones.sextants = [rng.int(1, 6)];
+      } else if (p.odontogramMode === 'arcada') {
+        zones.arches = [rng.pick(['superior', 'inferior'])];
       }
       return {
         prestacionCode: p.code,
         teeth,
         surfaces,
+        ...zones,
         discountPercent: rng.weighted([[0, 85], [5, 8], [10, 7]]),
         notes: rng.chance(0.2) ? rng.pick(['Pieza con sintomatología', 'Prioridad alta', 'Confirmar con radiografía', 'Segunda etapa']) : '',
       };

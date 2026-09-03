@@ -96,7 +96,10 @@ Reglas generales:
       "treatmentPlans": [
         { "patientKey": "P001", "userKey": "U1", "sucursalName": "Casa Matriz Providencia", "previsionName": "Isapre Banmédica",
           "convenioName": "Particular", "paymentMethod": "Contado", "name": "Rehabilitación inferior derecha", "observations": "Iniciar por cuadrante inferior derecho.",
-          "items": [ { "prestacionCode": "OB-01", "teeth": [46], "surfaces": ["O"], "notes": "" } ] }
+          "items": [ { "prestacionCode": "OB-01", "teeth": [46], "surfaces": ["O"], "notes": "" },
+                     { "prestacionCode": "PE-01", "quadrants": [1], "notes": "" } ] }
+        // Zonas según odontogramMode de la prestación: tooth/extraction → teeth[1]; surface → teeth[1] + surfaces;
+        // cuadrante → quadrants[1..8]; sextante → sextants[1..6]; arcada → arches["superior"|"inferior"]; session → nada.
         // convenioName SIEMPRE presente (la web lo exige). paymentMethod SOLO "Contado" | "Cuotas" (enumeración distinta a la de cartola).
         // Solo clínicas tipo "dental" o "ambas" (odontograma); las "estetica" no llevan presupuestos. items[].discountPercent no se usa (la web aplica el del convenio).
         // Tras crearlo, tratamientos.createTreatmentPlan guarda el número visible en plan.number.

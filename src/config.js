@@ -1,12 +1,23 @@
 // Configuración central. Lee .env una sola vez y expone valores tipados.
 // Los secretos se exponen como funciones (getter) para que nunca queden
 // serializados por accidente en logs o informes.
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import path from 'node:path';
 import fs from 'node:fs';
+import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// Carga el archivo de credenciales. Se acepta ".env" y también ".env.txt"
+// (el Bloc de notas suele agregar la extensión al guardar).
+for (const candidate of ['.env', '.env.txt']) {
+  const file = path.join(ROOT, candidate);
+  if (fs.existsSync(file)) {
+    dotenv.config({ path: file });
+    break;
+  }
+}
 
 function required(name) {
   const value = process.env[name];
@@ -42,9 +53,21 @@ export const config = {
   superadminEmail: () => required('DC_SUPERADMIN_EMAIL'),
   superadminPassword: () => required('DC_SUPERADMIN_PASSWORD'),
   defaultUserPassword: () => {
-    const value = required('DEFAULT_USER_PASSWORD');
-    if (value.length < 8) throw new Error('DEFAULT_USER_PASSWORD debe tener al menos 8 caracteres.');
-    return value;
+    const value = (process.env.DEFAULT_USER_PASSWORD || '').trim();
+    if (value) {
+      if (value.length < 8) throw new Error('DEFAULT_USER_PASSWORD debe tener al menos 8 caracteres.');
+      return value;
+    }
+    // Sin valor en .env: se genera una vez, se guarda en data/clave-usuarios.txt
+    // (ignorado por git) y se informa en el Word diario.
+    const file = path.join(dirs.data, 'clave-usuarios.txt');
+    if (fs.existsSync(file)) {
+      const saved = fs.readFileSync(file, 'utf8').trim();
+      if (saved.length >= 8) return saved;
+    }
+    const generated = 'Demo' + randomBytes(6).toString('base64url').replace(/[-_]/g, 'x') + '!';
+    fs.writeFileSync(file, generated + '\n', 'utf8');
+    return generated;
   },
 
   clinicsPerDay: num('CLINICS_PER_DAY', 10),

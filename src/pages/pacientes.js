@@ -113,6 +113,21 @@ export async function openPatient(page, patient, ctx) {
   const url = `${config.dentalcloudUrl}/pacientes/${patient.id}`;
   if (!page.url().startsWith(url)) await page.goto(url, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Datos paciente' }).waitFor();
+  await dismissDebtNotice(page);
+}
+
+/**
+ * Si el paciente tiene saldo pendiente, la ficha abre el aviso "Saldo pendiente"
+ * que bloquea las pestañas. Se cierra como lo haría una persona (botón Cerrar).
+ */
+export async function dismissDebtNotice(page) {
+  const heading = page.getByRole('heading', { level: 2, name: 'Saldo pendiente', exact: true });
+  // El aviso aparece tras cargar la cartola; se le da una breve oportunidad de mostrarse.
+  const appeared = await heading.waitFor({ state: 'visible', timeout: 1500 }).then(() => true).catch(() => false);
+  if (!appeared) return false;
+  await page.locator('button[aria-label="Cerrar"]').last().click();
+  await heading.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => undefined);
+  return true;
 }
 
 /** Abre una pestaña de la ficha por su texto (Horas, Tratamientos, Evoluciones, Cartola, ...). */

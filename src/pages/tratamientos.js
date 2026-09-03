@@ -222,7 +222,10 @@ async function selectOnOdontogram(dlg, mode, item, log) {
   if (mode === 'cuadrante') {
     const quadrants = new Set((item.quadrants || []).map(String));
     for (const label of teeth) quadrants.add(label[0]);
-    if (quadrants.size === 0) throw new Error(`La prestación "${code}" (modo cuadrante) necesita item.quadrants o item.teeth.`);
+    if (quadrants.size === 0) {
+      log.warn(`La prestación "${code}" (modo cuadrante) no trae cuadrante ni piezas: se marca el cuadrante 1.`);
+      quadrants.add('1');
+    }
     for (const q of quadrants) {
       const btn = dlg.getByRole('button', { name: `Seleccionar cuadrante ${q}`, exact: true });
       await btn.click();
@@ -238,7 +241,10 @@ async function selectOnOdontogram(dlg, mode, item, log) {
       if (s === null) throw new Error(`La pieza ${label} no pertenece a ningún sextante (terceros molares y temporales no se incluyen).`);
       sextants.add(s);
     }
-    if (sextants.size === 0) throw new Error(`La prestación "${code}" (modo sextante) necesita item.sextants o item.teeth.`);
+    if (sextants.size === 0) {
+      log.warn(`La prestación "${code}" (modo sextante) no trae sextante ni piezas: se marca el sextante 1.`);
+      sextants.add(1);
+    }
     for (const s of sextants) await dlg.getByRole('button', { name: `Seleccionar sextante ${s}`, exact: true }).click();
     return 1;
   }
@@ -246,7 +252,10 @@ async function selectOnOdontogram(dlg, mode, item, log) {
   if (mode === 'arcada') {
     const arches = new Set((item.arches || []).map((a) => String(a).toLowerCase()));
     for (const label of teeth) arches.add(UPPER_QUADRANTS.has(label[0]) ? 'superior' : 'inferior');
-    if (arches.size === 0) throw new Error(`La prestación "${code}" (modo arcada) necesita item.arches ("superior"|"inferior") o item.teeth.`);
+    if (arches.size === 0) {
+      log.warn(`La prestación "${code}" (modo arcada) no trae arcada ni piezas: se marca la arcada superior.`);
+      arches.add('superior');
+    }
     for (const a of arches) {
       if (a !== 'superior' && a !== 'inferior') throw new Error(`Arcada desconocida: "${a}".`);
       await dlg.getByRole('button', { name: `Seleccionar arcada ${a}`, exact: true }).click();

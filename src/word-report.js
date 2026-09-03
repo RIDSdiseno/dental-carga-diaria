@@ -143,7 +143,10 @@ export async function writeWordReport({ summary, plan, log }) {
   const errors = summary.clinics.flatMap((c) => c.errors.map((e) => ({ clinic: c.name, ...e })));
   children.push(heading(`Errores (${errors.length})`));
   if (!errors.length) children.push(para('Sin errores.'));
-  for (const e of errors.slice(0, 40)) children.push(para(`• ${e.clinic} · ${e.entity} · ${e.ref || ''}: ${e.message}`));
+  for (const e of errors.slice(0, 40)) {
+    const message = String(e.message || '').split('\n')[0].slice(0, 300);
+    children.push(para(`• ${e.clinic} · ${e.entity} · ${e.ref || ''}: ${message}`));
+  }
   if (errors.length > 40) children.push(para(`… y ${errors.length - 40} más (ver reports/${summary.runId}/report.md).`));
 
   const doc = new Document({

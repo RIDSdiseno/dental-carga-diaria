@@ -11,6 +11,7 @@ import * as cartola from '../pages/cartola.js';
 import * as observaciones from '../pages/observaciones.js';
 import * as documentos from '../pages/documentos.js';
 import { eachItem } from './clinic-setup.js';
+import { closeOpenModals } from '../pages/_helpers.js';
 
 function sessionFor(browser, ctx, user, suffix) {
   return openSession(browser, {
@@ -55,6 +56,7 @@ export async function populateClinic(browser, clinic, ctx) {
   log.step(`[${clinic.key}] Pacientes (${clinic.patients.length}) como ${operador.email}`);
   {
     const s = await sessionFor(browser, ctx, operador, 'operador');
+    ctx.onItemError = () => closeOpenModals(s.page);
     try {
       await eachItem(clinic.patients, 'patients', ctx, (p) => pacientes.createPatient(s.page, p, ctx), (p) => `${p.firstName} ${p.lastName} ${p.rut}`);
     } finally {
@@ -66,6 +68,7 @@ export async function populateClinic(browser, clinic, ctx) {
   log.step(`[${clinic.key}] Citas (${(clinic.appointments || []).length})`);
   {
     const s = await sessionFor(browser, ctx, clinic.admin, 'admin');
+    ctx.onItemError = () => closeOpenModals(s.page);
     try {
       const ready = withCreatedPatient(clinic.appointments, 'appointments', ctx);
       await eachItem(ready, 'appointments', ctx, async (a) => {
@@ -99,6 +102,7 @@ export async function populateClinic(browser, clinic, ctx) {
 
     log.step(`[${clinic.key}] ${dentist.name}: ${motivos.length} motivos, ${plans.length} presupuestos, ${evols.length} evoluciones`);
     const s = await sessionFor(browser, ctx, dentist, `odo_${dentist.key || 'admin'}`);
+    ctx.onItemError = () => closeOpenModals(s.page);
     try {
       for (const p of motivos) {
         if (ctx.shouldStop?.()) {
@@ -111,8 +115,9 @@ export async function populateClinic(browser, clinic, ctx) {
           ctx.counts.motivos.ok += 1;
         } catch (err) {
           ctx.counts.motivos.fail += 1;
-          ctx.errors.push({ entity: 'motivos', ref: p.rut, message: err.message });
+          ctx.errors.push({ entity: 'motivos', ref: p.rut, message: String(err.message).split('\n')[0] });
           log.error(`Motivo de consulta de ${p.rut} falló: ${err.message}`);
+          await closeOpenModals(s.page).catch(() => undefined);
         }
         ctx.savePlan?.();
       }
@@ -127,6 +132,7 @@ export async function populateClinic(browser, clinic, ctx) {
   log.step(`[${clinic.key}] Cartola, observaciones y documentos`);
   {
     const s = await sessionFor(browser, ctx, clinic.admin, 'admin');
+    ctx.onItemError = () => closeOpenModals(s.page);
     try {
       await eachItem(withCreatedPatient(clinic.ledger, 'ledger', ctx), 'ledger', ctx, (m) => cartola.addLedgerMovement(s.page, ctx.resolvePatient(m.patientKey), m, ctx), patientRef(ctx));
       await eachItem(withCreatedPatient(clinic.observations, 'observations', ctx), 'observations', ctx, (o) => observaciones.addObservation(s.page, ctx.resolvePatient(o.patientKey), o, ctx), patientRef(ctx));

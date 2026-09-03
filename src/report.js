@@ -85,7 +85,8 @@ export function buildMarkdown(summary) {
   lines.push('');
   if (!errors.length) lines.push('Sin errores.');
   for (const e of errors.slice(0, 60)) {
-    lines.push(`- **${e.clinic}** · ${ENTITY_LABELS[e.entity] || e.entity} · ${e.ref || ''}: ${e.message}`);
+    const message = String(e.message || '').split('\n')[0].slice(0, 300);
+    lines.push(`- **${e.clinic}** · ${ENTITY_LABELS[e.entity] || e.entity} · ${e.ref || ''}: ${message}`);
   }
   if (errors.length > 60) lines.push(`- … y ${errors.length - 60} más (ver report.json).`);
   lines.push('');

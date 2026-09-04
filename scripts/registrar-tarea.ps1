@@ -1,5 +1,6 @@
 # Registra (o actualiza) la tarea programada "DentalCargaDiaria":
-# todos los días a las 08:30, ejecuta scripts\run-daily.cmd con el usuario actual,
+# todos los días a las 08:45 (o la hora que se pase como argumento), ejecuta
+# scripts\run-daily.cmd con el usuario actual,
 # solo cuando el usuario tiene la sesión iniciada (el equipo debe estar encendido).
 #
 # Uso (PowerShell, desde cualquier carpeta):
@@ -10,7 +11,7 @@ $taskName = 'DentalCargaDiaria'
 $launcher = Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts\run-daily.cmd'
 if (-not (Test-Path $launcher)) { throw "No se encontró $launcher" }
 
-$hora = if ($args.Count -ge 1) { $args[0] } else { '08:30' }
+$hora = if ($args.Count -ge 1) { $args[0] } else { '08:45' }
 
 schtasks /Create /F /SC DAILY /ST $hora /TN $taskName /TR "`"$launcher`"" /RL LIMITED | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "schtasks devolvió el código $LASTEXITCODE" }

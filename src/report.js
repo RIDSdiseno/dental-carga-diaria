@@ -15,6 +15,7 @@ const ENTITY_LABELS = {
   users: 'Profesionales',
   schedules: 'Bloques de horario',
   patients: 'Pacientes',
+  consultationPayments: 'Pagos de consulta',
   motivos: 'Motivos de consulta',
   appointments: 'Citas',
   treatmentPlans: 'Presupuestos',

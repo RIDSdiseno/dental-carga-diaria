@@ -89,6 +89,12 @@ Reglas generales:
         }
       ],
 
+      "consultationPayments": [
+        { "patientKey": "P001", "rut": "17.845.221-3", "firstName": "Antonia", "lastName": "Riquelme Vega",
+          "email": "antonia.riquelme.0904@demo-fordent.invalid", "amount": 25000, "paymentMethod": "Tarjeta débito" }
+        // Página "Pagos de Consulta" (/pagos-consulta). Se registran ANTES de crear la ficha del paciente
+        // (≈45 % de los pacientes). paymentMethod: Efectivo | Tarjeta débito | Tarjeta crédito | Transferencia.
+      ],
       "appointments": [
         { "patientKey": "P001", "userKey": "U1", "chairNumber": 1, "date": "2026-09-05", "time": "10:00", "durationMin": 30, "notes": "Control y destartraje", "type": "cita" }
         // type: "cita" | "control". Fechas entre -10 y +20 días desde hoy. Sin choques: mismo sillón/hora no se repite.

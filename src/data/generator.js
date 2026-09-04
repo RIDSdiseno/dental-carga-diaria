@@ -452,6 +452,30 @@ function buildPatient(ctx, clinic, index, homeComuna, withPhoto) {
 const ESTETICA_NOTES = ['Aplicación de toxina botulínica', 'Relleno con ácido hialurónico', 'Limpieza facial', 'Primera consulta', 'Revisión de presupuesto', 'Evaluación inicial'];
 const ESTETICA_EVOLUTION = /toxina|hialurónico/i;
 
+/**
+ * Pagos de consulta ("Pagos de Consulta" en la web): ≈45 % de los pacientes pagan su
+ * consulta ANTES de ser creados como pacientes. Mismo nombre/correo que la ficha, para
+ * que el autocompletado por RUT del formulario "Nuevo paciente" coincida.
+ */
+function buildConsultationPayments(ctx, clinic) {
+  const { rng } = ctx;
+  const methods = ['Efectivo', 'Tarjeta débito', 'Tarjeta crédito', 'Transferencia'];
+  const payments = [];
+  for (const patient of clinic.patients) {
+    if (!rng.chance(0.45)) continue;
+    payments.push({
+      patientKey: patient.key,
+      rut: patient.rut,
+      firstName: patient.firstName,
+      lastName: patient.lastName,
+      email: rng.chance(0.8) ? patient.email : null,
+      amount: rng.pick([15000, 18000, 20000, 25000, 28000, 30000, 35000]),
+      paymentMethod: rng.weighted([[methods[0], 30], [methods[1], 30], [methods[2], 15], [methods[3], 25]]),
+    });
+  }
+  return payments;
+}
+
 function buildAppointments(ctx, clinic) {
   const { rng } = ctx;
   const odontologos = clinic.users.filter((u) => u.role === 'odontologo');
@@ -672,6 +696,7 @@ function buildClinic(ctx, { index, root, patientsCount }) {
     for (const patient of clinic.patients) patient.userKey = tratantes.length ? ctx.rng.pick(tratantes).key : 'admin';
   }
 
+  clinic.consultationPayments = buildConsultationPayments(ctx, clinic);
   clinic.appointments = buildAppointments(ctx, clinic);
   clinic.treatmentPlans = buildTreatmentPlans(ctx, clinic);
   clinic.evolutions = buildEvolutions(ctx, clinic);
@@ -778,7 +803,7 @@ export function summarizePlan(plan) {
   const totals = {
     clinics: plan.clinics.length, byTipo: { dental: 0, ambas: 0, estetica: 0 },
     users: 0, odontologos: 0, schedules: 0, chairs: 0, sucursales: 0, previsiones: 0, convenios: 0, prestaciones: 0,
-    patients: 0, patientsWithPhoto: 0, appointments: 0, treatmentPlans: 0, treatmentItems: 0,
+    patients: 0, patientsWithPhoto: 0, consultationPayments: 0, appointments: 0, treatmentPlans: 0, treatmentItems: 0,
     evolutions: 0, ledger: 0, observations: 0, documents: 0,
   };
   const perClinic = [];
@@ -791,6 +816,7 @@ export function summarizePlan(plan) {
     };
     perClinic.push(row);
     totals.users += c.users.length;
+    totals.consultationPayments += (c.consultationPayments || []).length;
     totals.odontologos += c.users.filter((u) => u.role === 'odontologo').length;
     totals.schedules += c.schedules.length;
     totals.chairs += c.chairs.length;

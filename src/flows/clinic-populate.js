@@ -4,6 +4,7 @@
 //  - cada odontólogo: motivo de consulta, presupuestos y evoluciones de SUS pacientes
 import { openSession } from '../browser.js';
 import * as pacientes from '../pages/pacientes.js';
+import * as pagos from '../pages/pagos.js';
 import * as agenda from '../pages/agenda.js';
 import * as tratamientos from '../pages/tratamientos.js';
 import * as evoluciones from '../pages/evoluciones.js';
@@ -54,12 +55,14 @@ export async function populateClinic(browser, clinic, ctx) {
 
   const pending = (items) => (items || []).some((i) => !i.done);
 
-  // 1) Pacientes con el operador (recepción).
-  if ((clinic.patients || []).some((p) => !p.id)) {
-    log.step(`[${clinic.key}] Pacientes (${clinic.patients.length}) como ${operador.email}`);
+  // 1) Recepción (operador): primero los pagos de consulta de quienes pagaron antes de
+  //    la atención, y después las fichas de paciente.
+  if (pending(clinic.consultationPayments) || (clinic.patients || []).some((p) => !p.id)) {
+    log.step(`[${clinic.key}] Pagos de consulta (${(clinic.consultationPayments || []).length}) y pacientes (${clinic.patients.length}) como ${operador.email}`);
     const s = await sessionFor(browser, ctx, operador, 'operador');
     ctx.onItemError = () => closeOpenModals(s.page);
     try {
+      await eachItem(clinic.consultationPayments, 'consultationPayments', ctx, (pay) => pagos.registerConsultationPayment(s.page, pay, ctx), (pay) => `${pay.firstName} ${pay.lastName} ${pay.rut}`);
       await eachItem(clinic.patients, 'patients', ctx, (p) => pacientes.createPatient(s.page, p, ctx), (p) => `${p.firstName} ${p.lastName} ${p.rut}`);
     } finally {
       await s.close();

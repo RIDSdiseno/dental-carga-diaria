@@ -75,6 +75,7 @@ function countsFromPlan(clinic) {
   tally('users', clinic.users);
   tally('schedules', clinic.schedules);
   tally('patients', clinic.patients, (p) => Boolean(p.id));
+  tally('consultationPayments', clinic.consultationPayments);
   tally('motivos', (clinic.patients || []).filter((p) => p.motivoConsulta), (p) => Boolean(p.motivoDone));
   tally('appointments', clinic.appointments);
   tally('treatmentPlans', clinic.treatmentPlans);

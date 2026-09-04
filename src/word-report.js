@@ -93,6 +93,7 @@ export async function writeWordReport({ summary, plan, log }) {
         ['Clínicas (holdings)', t.holdings.ok, t.holdings.fail],
         ['Clínicas federadas a Dental-Demo', t.federation.ok, t.federation.fail],
         ['Pacientes', t.patients.ok, t.patients.fail],
+        ['Pagos de consulta', t.consultationPayments.ok, t.consultationPayments.fail],
         ['Profesionales y usuarios', t.users.ok, t.users.fail],
         ['Citas', t.appointments.ok, t.appointments.fail],
         ['Presupuestos', t.treatmentPlans.ok, t.treatmentPlans.fail],

@@ -70,7 +70,10 @@ function fmtDate(dateKey) {
 export async function writeWordReport({ summary, plan, log }) {
   const dir = wordReportDir();
   fs.mkdirSync(dir, { recursive: true });
-  const filePath = path.join(dir, `Carga ${summary.date}${summary.runId.includes('_prueba') ? ' (prueba)' : ''}.docx`);
+  // runId = "YYYY-MM-DD_HHMM[_etiqueta]". Las corridas con etiqueta (pruebas) llevan su
+  // propio archivo para no pisar el Word de la carga diaria.
+  const tag = summary.runId.split('_').slice(2).join('_');
+  const filePath = path.join(dir, `Carga ${summary.date}${tag ? ` (${tag})` : ''}.docx`);
   const password = config.defaultUserPassword();
   const t = summary.totals;
 

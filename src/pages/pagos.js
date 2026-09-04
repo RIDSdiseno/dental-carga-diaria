@@ -33,18 +33,32 @@ export async function registerConsultationPayment(page, payment, ctx) {
   await form.getByRole('button', { name: 'Registrar pago', exact: true }).click();
 
   // La web vacía el RUT al guardar; si hay error lo muestra dentro del formulario.
+  const waitMs = Math.max(config.actionTimeoutMs, 45000);
   const started = Date.now();
-  while (Date.now() - started < config.actionTimeoutMs) {
-    if ((await rutInput.inputValue()) === '') break;
+  let confirmed = false;
+  while (Date.now() - started < waitMs) {
+    if ((await rutInput.inputValue()) === '') {
+      confirmed = true;
+      break;
+    }
     const err = await visibleError(form);
     if (err) throw new Error(`La web rechazó el pago de consulta: ${err}`);
     await page.waitForTimeout(150);
   }
-  if ((await rutInput.inputValue()) !== '') throw new Error(`El pago de consulta de ${payment.rut} no se confirmó en ${config.actionTimeoutMs} ms.`);
 
-  const row = page.locator('tr').filter({ hasText: formatRutText(payment.rut) }).first();
-  const listed = await row.waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
-  if (!listed) log.warn(`Pago de ${payment.rut} registrado, pero no se vio en la tabla (se da por creado).`);
+  const rowFor = () => page.locator('tr').filter({ hasText: formatRutText(payment.rut) }).first();
+  if (!confirmed) {
+    // Sin confirmación ni error: puede que la web haya guardado igual. Se recarga la
+    // página y se busca el pago en "Pagos registrados" antes de darlo por fallido.
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.getByRole('heading', { name: 'Pagos registrados' }).waitFor();
+    const exists = await rowFor().waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    if (!exists) throw new Error(`El pago de consulta de ${payment.rut} no se confirmó en ${waitMs} ms y no aparece en la tabla.`);
+    log.warn(`Pago de ${payment.rut}: la web tardó en responder, pero el pago quedó registrado.`);
+  } else {
+    const listed = await rowFor().waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+    if (!listed) log.warn(`Pago de ${payment.rut} registrado, pero no se vio en la tabla (se da por creado).`);
+  }
 
   log.info(`Pago de consulta registrado: ${payment.firstName} ${payment.lastName} (${formatRutText(payment.rut)}) $${Math.round(payment.amount)} · ${method}`);
   return true;

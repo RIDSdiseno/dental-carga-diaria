@@ -16,6 +16,7 @@ import { loadRegistry, saveRegistry, usedSets, reserve, upsertClinic } from './r
 import { launchBrowser, openSession } from './browser.js';
 import { buildDailyPlan, materializeAssets, summarizePlan } from './data/generator.js';
 import * as superadmin from './pages/superadmin.js';
+import { retry } from './pages/_helpers.js';
 import { setupClinic } from './flows/clinic-setup.js';
 import { populateClinic } from './flows/clinic-populate.js';
 import { writeReport, emptyCounts, mergeCounts } from './report.js';
@@ -222,7 +223,7 @@ async function main() {
           }
           if (!clinic.federated) {
             try {
-              await superadmin.configureFederation(sa.page, clinic, ctx);
+              await retry(() => superadmin.configureFederation(sa.page, clinic, ctx), { attempts: 2, delayMs: 3000, log: ctx.log, label: 'federación' });
               res.counts.federation.ok += 1;
             } catch (err) {
               res.counts.federation.fail += 1;
@@ -232,7 +233,7 @@ async function main() {
           }
           if (!clinic.modulesDone) {
             try {
-              await superadmin.enableAllModules(sa.page, clinic, ctx);
+              await retry(() => superadmin.enableAllModules(sa.page, clinic, ctx), { attempts: 2, delayMs: 3000, log: ctx.log, label: 'módulos' });
               clinic.modulesDone = true;
               res.counts.modules.ok += 1;
             } catch (err) {

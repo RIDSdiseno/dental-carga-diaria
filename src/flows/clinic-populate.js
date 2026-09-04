@@ -52,9 +52,11 @@ export async function populateClinic(browser, clinic, ctx) {
   const operador = users.find((u) => u.role === 'operador' && u.done) || clinic.admin;
   const odontologos = users.filter((u) => u.role === 'odontologo' && u.done);
 
+  const pending = (items) => (items || []).some((i) => !i.done);
+
   // 1) Pacientes con el operador (recepción).
-  log.step(`[${clinic.key}] Pacientes (${clinic.patients.length}) como ${operador.email}`);
-  {
+  if ((clinic.patients || []).some((p) => !p.id)) {
+    log.step(`[${clinic.key}] Pacientes (${clinic.patients.length}) como ${operador.email}`);
     const s = await sessionFor(browser, ctx, operador, 'operador');
     ctx.onItemError = () => closeOpenModals(s.page);
     try {
@@ -65,8 +67,8 @@ export async function populateClinic(browser, clinic, ctx) {
   }
 
   // 2) Citas con el administrador (puede elegir el profesional en el formulario).
-  log.step(`[${clinic.key}] Citas (${(clinic.appointments || []).length})`);
-  {
+  if (pending(clinic.appointments)) {
+    log.step(`[${clinic.key}] Citas (${(clinic.appointments || []).length})`);
     const s = await sessionFor(browser, ctx, clinic.admin, 'admin');
     ctx.onItemError = () => closeOpenModals(s.page);
     try {
@@ -129,8 +131,8 @@ export async function populateClinic(browser, clinic, ctx) {
   }
 
   // 4) Administrador: cartola, observaciones y documentos.
-  log.step(`[${clinic.key}] Cartola, observaciones y documentos`);
-  {
+  if (pending(clinic.ledger) || pending(clinic.observations) || pending(clinic.documents)) {
+    log.step(`[${clinic.key}] Cartola, observaciones y documentos`);
     const s = await sessionFor(browser, ctx, clinic.admin, 'admin');
     ctx.onItemError = () => closeOpenModals(s.page);
     try {

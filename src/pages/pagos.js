@@ -32,7 +32,9 @@ export async function registerConsultationPayment(page, payment, ctx) {
   await form.getByLabel('Monto', { exact: true }).fill(String(Math.round(payment.amount)));
   const method = PAYMENT_METHODS.includes(payment.paymentMethod) ? payment.paymentMethod : PAYMENT_METHODS[0];
   if (method !== payment.paymentMethod) log.warn(`Método de pago "${payment.paymentMethod}" no existe en la web; se usa "${method}".`);
-  await form.getByLabel('Método de pago', { exact: true }).selectOption({ label: method });
+  // El <label> de "Método de pago" envuelve al <select>, así que su texto incluye las opciones
+  // y getByLabel exacto no coincide; el formulario tiene un único <select>.
+  await form.locator('select').first().selectOption({ label: method });
 
   await form.getByRole('button', { name: 'Registrar pago', exact: true }).click();
 

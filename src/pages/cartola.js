@@ -98,10 +98,13 @@ export async function addLedgerMovement(page, patient, movement, ctx) {
 
   await submitAndWaitClosed(page, dlg, 'Registrar', meta.title);
 
-  // La pestaña recarga la cartola; confirmar que el movimiento quedó listado.
+  // El cierre del modal ya confirma el registro. Que el movimiento aparezca en el
+  // listado es una comprobación adicional: si no se ve, se avisa pero no es error
+  // (así un --resume no lo vuelve a registrar).
   await waitCartolaLoaded(page, config.navigationTimeoutMs);
   if (movement.description) {
-    await page.getByText(movement.description, { exact: true }).first().waitFor({ timeout: config.actionTimeoutMs });
+    const listed = await page.getByText(movement.description, { exact: true }).first().waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+    if (!listed) log.warn(`Movimiento registrado para ${patient.rut}, pero su glosa no se encontró en el listado (se da por creado).`);
   }
 
   log.info(`Cartola ${patient.rut}: ${movement.type} de ${Math.round(amount)}${movement.planNumber != null ? ` (presupuesto N° ${movement.planNumber})` : ''} registrado`);

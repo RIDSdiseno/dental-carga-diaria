@@ -36,8 +36,14 @@ copy .env.example .env      # y completar credenciales (ver abajo)
 ```
 
 En `.env` hay que completar **tres** valores: correo y contraseña del superadmin de
-DentalCloud, y la contraseña que se asignará a todos los usuarios creados. Nadie más
-que el script lee ese archivo; está en `.gitignore`.
+DentalCloud, y la contraseña que se asignará a todos los usuarios creados (si se deja
+vacía, el script genera una y la guarda en `data/clave-usuarios.txt`). El archivo también
+se acepta con el nombre `.env.txt`, que es como suele guardarlo el Bloc de notas. Nadie
+más que el script lee ese archivo; ambos nombres están en `.gitignore`.
+
+Si una corrida termina "con errores", se reintenta solo lo que faltó con
+`node src/run-daily.js --resume <runId> --no-git` (el runId es el nombre de la carpeta
+en `reports/`). La reanudación omite todo lo que ya se creó.
 
 ### Prueba controlada (1 clínica, 10 pacientes)
 

@@ -16,7 +16,7 @@
 //   - Botones: "Cancelar" / "Registrar" (mientras guarda: "Guardando...").
 //   - Error: <p class="... text-red-600">.
 //   - Tras registrar, la tabla "Saldo total" (abierta por defecto) lista el movimiento.
-import { fillIfDefined, modal, submitAndWaitClosed } from './_helpers.js';
+import { appearsWithin, fillIfDefined, modal, submitAndWaitClosed } from './_helpers.js';
 import { openPatientTab } from './pacientes.js';
 
 export const MOVEMENT_TYPES = {
@@ -103,7 +103,7 @@ export async function addLedgerMovement(page, patient, movement, ctx) {
   // (así un --resume no lo vuelve a registrar).
   await waitCartolaLoaded(page, config.navigationTimeoutMs);
   if (movement.description) {
-    const listed = await page.getByText(movement.description, { exact: true }).first().waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+    const listed = await appearsWithin(page.getByText(movement.description, { exact: true }).first(), 8000);
     if (!listed) log.warn(`Movimiento registrado para ${patient.rut}, pero su glosa no se encontró en el listado (se da por creado).`);
   }
 

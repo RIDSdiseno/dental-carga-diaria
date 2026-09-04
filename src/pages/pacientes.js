@@ -1,6 +1,6 @@
 // Flujos sobre pacientes en DentalCloud: crear ficha completa (con foto),
 // abrir ficha y registrar el motivo de consulta. Todo por la interfaz web.
-import { abs, fillIfDefined, lastUrlSegment, modal, submitAndWaitClosed, waitForAttr } from './_helpers.js';
+import { abs, appearsWithin, fillIfDefined, lastUrlSegment, modal, submitAndWaitClosed, waitForAttr } from './_helpers.js';
 
 export const ALLERGY_LABELS = {
   fluoruro: 'Flúor / fluoruro',
@@ -123,8 +123,7 @@ export async function openPatient(page, patient, ctx) {
 export async function dismissDebtNotice(page) {
   const heading = page.getByRole('heading', { level: 2, name: 'Saldo pendiente', exact: true });
   // El aviso aparece tras cargar la cartola; se le da una breve oportunidad de mostrarse.
-  const appeared = await heading.waitFor({ state: 'visible', timeout: 1500 }).then(() => true).catch(() => false);
-  if (!appeared) return false;
+  if (!(await appearsWithin(heading, 1500))) return false;
   await page.locator('button[aria-label="Cerrar"]').last().click();
   await heading.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => undefined);
   return true;

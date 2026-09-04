@@ -16,7 +16,7 @@
 //   - Éxito: "Evolución guardada correctamente." (3 s). Error: <p class="... text-red-600">.
 //   - Lista derecha: filtros "Habilitadas" | "Deshabilitadas" | "Todas"; tarjeta
 //     por evolución con el HTML del contenido.
-import { visibleError } from './_helpers.js';
+import { appearsWithin, visibleError } from './_helpers.js';
 import { openPatientTab } from './pacientes.js';
 
 function normalizeSpaces(text) {
@@ -141,7 +141,7 @@ export async function createEvolution(page, patient, evolution, ctx) {
   // avisa pero NO se considera error, para no volver a crearla en un --resume.
   const list = page.getByRole('button', { name: 'Imprimir', exact: true }).locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
   const snippet = normalizeSpaces(text).slice(0, 40);
-  const listed = await list.getByText(snippet).first().waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+  const listed = await appearsWithin(list.getByText(snippet).first(), 8000);
   if (!listed) log.warn(`Evolución guardada para ${patient.rut}, pero no se encontró su texto en el listado (se da por creada).`);
 
   log.info(`Evolución creada para ${patient.rut}: "${snippet}${text.length > 40 ? '…' : ''}"`);

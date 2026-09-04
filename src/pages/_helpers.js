@@ -47,6 +47,11 @@ export async function submitAndWaitClosed(page, dlg, buttonName, title, timeout 
   throw new Error(`El modal "${title}" no se cerró tras ${timeout} ms.`);
 }
 
+/** true si el elemento llega a ser visible dentro del plazo; false si no (nunca lanza). */
+export async function appearsWithin(locator, timeout = 8000) {
+  return locator.waitFor({ state: 'visible', timeout }).then(() => true).catch(() => false);
+}
+
 export async function waitForAttr(locator, attr, expected, timeout = config.actionTimeoutMs) {
   const started = Date.now();
   while (Date.now() - started < timeout) {

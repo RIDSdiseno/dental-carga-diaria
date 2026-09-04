@@ -18,6 +18,13 @@ export function formatRut(body, dv) {
   return `${withDots}-${dv}`;
 }
 
+/** Formatea un RUT escrito de cualquier forma ("12345678k", "12.345.678-K") a "12.345.678-K". */
+export function formatRutText(rut) {
+  const clean = String(rut).replace(/[^0-9kK]/g, '').toUpperCase();
+  if (clean.length < 2) return clean;
+  return formatRut(clean.slice(0, -1), clean.slice(-1));
+}
+
 /**
  * Genera un RUT aleatorio dentro de un rango de cuerpo.
  * Personas: 6.000.000 – 26.999.999. Empresas: 76.000.000 – 77.999.999.

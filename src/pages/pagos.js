@@ -3,15 +3,9 @@
 // Formulario real: labels que envuelven al input → RUT, Nombre, Apellido,
 // Correo (opcional), Monto, Método de pago; botón "Registrar pago".
 import { visibleError } from './_helpers.js';
+import { formatRutText } from '../data/rut.js';
 
 export const PAYMENT_METHODS = ['Efectivo', 'Tarjeta débito', 'Tarjeta crédito', 'Transferencia'];
-
-function formatRut(rut) {
-  const clean = String(rut).replace(/[^0-9kK]/g, '').toUpperCase();
-  const body = clean.slice(0, -1);
-  const dv = clean.slice(-1);
-  return `${body.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}-${dv}`;
-}
 
 /**
  * Registra un pago de consulta. `payment` = { rut, firstName, lastName, email?, amount, paymentMethod }.
@@ -25,7 +19,7 @@ export async function registerConsultationPayment(page, payment, ctx) {
 
   const form = page.locator('form').filter({ has: page.getByRole('button', { name: /Registrar pago|Registrando/ }) });
   const rutInput = form.getByLabel('RUT', { exact: true });
-  await rutInput.fill(formatRut(payment.rut));
+  await rutInput.fill(formatRutText(payment.rut));
   await form.getByLabel('Nombre', { exact: true }).fill(payment.firstName);
   await form.getByLabel('Apellido', { exact: true }).fill(payment.lastName);
   if (payment.email) await form.getByLabel('Correo (opcional)', { exact: true }).fill(payment.email);
@@ -48,10 +42,10 @@ export async function registerConsultationPayment(page, payment, ctx) {
   }
   if ((await rutInput.inputValue()) !== '') throw new Error(`El pago de consulta de ${payment.rut} no se confirmó en ${config.actionTimeoutMs} ms.`);
 
-  const row = page.locator('tr').filter({ hasText: formatRut(payment.rut) }).first();
+  const row = page.locator('tr').filter({ hasText: formatRutText(payment.rut) }).first();
   const listed = await row.waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
   if (!listed) log.warn(`Pago de ${payment.rut} registrado, pero no se vio en la tabla (se da por creado).`);
 
-  log.info(`Pago de consulta registrado: ${payment.firstName} ${payment.lastName} (${formatRut(payment.rut)}) $${Math.round(payment.amount)} · ${method}`);
+  log.info(`Pago de consulta registrado: ${payment.firstName} ${payment.lastName} (${formatRutText(payment.rut)}) $${Math.round(payment.amount)} · ${method}`);
   return true;
 }

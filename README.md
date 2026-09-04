@@ -5,7 +5,7 @@ Carga diaria automática de datos de prueba realistas en **DentalCloud**
 (dentalaicloud.netlify.app). Todo se hace **por la interfaz web** con Playwright,
 exactamente como lo haría una persona: no se toca la base de datos ni la API.
 
-## Qué hace cada día (08:30 → antes de las 18:00)
+## Qué hace cada día (08:45 → antes de las 18:00)
 
 1. Genera un plan del día: 10 clínicas nuevas y 300 pacientes repartidos entre ellas,
    con datos chilenos ficticios pero con formato real (RUT válido, +56 9, comunas, isapres).
@@ -64,14 +64,16 @@ Opciones útiles: `--clinics N`, `--patients N`, `--parallel N`, `--seed N`,
 `--no-git`, `--only-setup`, `--deadline HH:MM`, `--resume <runId>` (continúa un plan
 interrumpido usando `reports/<runId>/plan.json`).
 
-### Programar a las 08:30 todos los días
+### Programar a las 08:45 todos los días
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File C:\Proyectos\dental-carga-diaria\scripts\registrar-tarea.ps1
+powershell -ExecutionPolicy Bypass -File C:\Proyectos\dental-carga-diaria\scripts\registrar-tarea.ps1 08:45
 ```
 
-Crea la tarea `DentalCargaDiaria` del Programador de tareas de Windows. El equipo debe
-estar encendido y con la sesión iniciada a esa hora.
+Crea (o actualiza) la tarea `DentalCargaDiaria` del Programador de tareas de Windows. El
+equipo debe estar encendido y con la sesión iniciada a esa hora. El lanzador
+`scripts/run-daily.cmd` fuerza el modo sin ventana y, si la corrida termina con errores en
+algunos ítems, la reanuda una vez automáticamente para reintentar solo lo que faltó.
 
 ## Estructura
 

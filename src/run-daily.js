@@ -96,6 +96,8 @@ async function main() {
   const runDir = path.join(config.dirs.reports, runId);
   const planPath = path.join(runDir, 'plan.json');
   const log = createLogger(runDir);
+  // El lanzador (scripts/run-daily.cmd) usa este archivo para reanudar solo si hubo errores.
+  fs.writeFileSync(path.join(config.dirs.reports, 'ultimo-runid.txt'), runId, 'utf8');
   log.info(`Inicio de la carga ${runId}`, { clinics: args.clinics, patients: args.patients, parallel: args.parallel, deadline: args.deadline, resume: Boolean(args.resume) });
 
   // Verificación temprana de credenciales (sin registrarlas).

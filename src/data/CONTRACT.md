@@ -158,6 +158,6 @@ Campos opcionales que los flujos entienden aunque el generador no los produzca:
 
 1. Superadmin: crear holding → abrir detalle → federación ON (y "Solo catálogo" OFF, conexiones individuales ON) → módulos ON.
 2. Admin de la clínica: sillones → sucursales → previsiones → convenios → prestaciones → profesionales (con firma) → horarios.
-3. Operador: pacientes (ficha completa + foto) → motivo de consulta → citas.
+3. Operador: pagos de consulta (página "Pagos de Consulta", antes de la ficha) → pacientes (ficha completa + foto). Admin: citas (elige el profesional).
 4. Odontólogo: presupuestos (necesitan prestaciones, sucursal, previsión) → evoluciones.
 5. Admin u operador: abonos en cartola (pueden asociarse a presupuesto) → observaciones → documentos.

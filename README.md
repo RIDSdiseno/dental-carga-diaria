@@ -14,7 +14,8 @@ exactamente como lo haría una persona: no se toca la base de datos ni la API.
    sin "Solo catálogo") y habilita todos los módulos.
 4. **Administrador de cada clínica**: sillones, sucursales, previsiones, convenios,
    prestaciones, profesionales (con firma) y horarios.
-5. **Operador**: fichas de paciente completas. **Administrador**: citas.
+5. **Operador**: pagos de consulta previos (≈45 % de los pacientes, en "Pagos de Consulta")
+   y luego las fichas de paciente completas. **Administrador**: citas.
    **Odontólogos**: motivo de consulta, presupuestos con odontograma y evoluciones.
    **Administrador**: abonos en cartola, observaciones y documentos clínicos.
 6. Escribe un informe técnico en `reports/<runId>/report.md` (y `reports/ULTIMO-INFORME.md`)

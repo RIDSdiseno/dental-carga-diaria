@@ -136,11 +136,14 @@ export async function createEvolution(page, patient, evolution, ctx) {
   }
   if (!saved) throw new Error(`La evolución no se guardó en ${config.actionTimeoutMs} ms (sin confirmación de la web).`);
 
-  // Verificar que aparece en la lista (tarjetas con el contenido HTML).
+  // La web ya confirmó el guardado. Verificar además que aparece en la lista es solo
+  // una comprobación adicional: si no se encuentra el texto (paginación, formato), se
+  // avisa pero NO se considera error, para no volver a crearla en un --resume.
   const list = page.getByRole('button', { name: 'Imprimir', exact: true }).locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
-  const snippet = normalizeSpaces(text).slice(0, 60);
-  await list.getByText(snippet).first().waitFor({ timeout: config.actionTimeoutMs });
+  const snippet = normalizeSpaces(text).slice(0, 40);
+  const listed = await list.getByText(snippet).first().waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+  if (!listed) log.warn(`Evolución guardada para ${patient.rut}, pero no se encontró su texto en el listado (se da por creada).`);
 
-  log.info(`Evolución creada para ${patient.rut}: "${snippet}${text.length > 60 ? '…' : ''}"`);
+  log.info(`Evolución creada para ${patient.rut}: "${snippet}${text.length > 40 ? '…' : ''}"`);
   return true;
 }

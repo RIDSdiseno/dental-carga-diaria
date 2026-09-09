@@ -34,6 +34,8 @@ export async function recordVideo({ scenes, audio, data, workDir, log = console 
     operador: { base: config.dentalcloudUrl, email: data.operator.email, password: config.defaultUserPassword(), selectors: 'dc' },
     odontologo: { base: config.dentalcloudUrl, email: data.dentist.email, password: config.defaultUserPassword(), selectors: 'dc' },
     demo: { base: config.dentalDemoUrl, email: config.superadminEmail(), password: config.superadminPassword(), selectors: 'dd' },
+    // La federación crea en Dental-Demo al administrador de la clínica con el mismo correo y contraseña.
+    'demo-admin': { base: config.dentalDemoUrl, email: data.admin.email, password: config.defaultUserPassword(), selectors: 'dd' },
   };
 
   const ctx = {

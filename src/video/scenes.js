@@ -11,7 +11,7 @@ export function buildScenes() {
       title: 'Qué es fordentcloud',
       screen: 'Tarjeta de título con el nombre del producto y sus dos plataformas.',
       narration:
-        'Bienvenidos a fordentcloud. Es una solución completa para clínicas dentales y estéticas, formada por dos plataformas que trabajan conectadas. DentalCloud es el sistema del holding: desde ahí se crean las clínicas, se configuran sus equipos y se lleva toda la atención de los pacientes, desde la agenda hasta la cartola. Dental-Demo es el sistema de la clínica: recibe automáticamente esa información y suma inventario, radiografías y finanzas. En los próximos minutos veremos el recorrido completo: crear una clínica, configurarla, atender a un paciente y comprobar cómo todo aparece sincronizado en la otra plataforma, sin volver a cargar nada.',
+        'Bienvenidos a fordentcloud. Es una solución completa para clínicas dentales y estéticas, formada por dos plataformas que trabajan conectadas. DentalCloud es el sistema del holding: desde ahí se crean las clínicas, se configuran sus equipos y se lleva toda la atención de los pacientes, desde la agenda hasta la cartola. Dental-Demo es el sistema de la clínica: recibe automáticamente esa información y suma inventario, cotizaciones, cobranza y finanzas. En los próximos minutos veremos el recorrido completo: crear una clínica, configurarla, atender a un paciente y comprobar cómo todo aparece sincronizado en la otra plataforma, sin volver a cargar nada.',
       run: (ctx) =>
         ctx.card('S01', {
           kicker: 'Presentación del sistema',
@@ -323,7 +323,7 @@ export function buildScenes() {
         ctx.card('S20', {
           kicker: 'Parte 4',
           title: 'Dental-Demo: el sistema de la clínica',
-          subtitle: 'La misma información, ya sincronizada, más inventario, radiografías y finanzas.',
+          subtitle: 'La misma información, ya sincronizada, más inventario, cotizaciones, cobranza y finanzas.',
         }),
     },
     {
@@ -369,14 +369,26 @@ export function buildScenes() {
       id: 'S23',
       section: 'Parte 4 · Dental-Demo',
       title: 'Lo que agrega Dental-Demo',
-      screen: 'Vista de Dental-Demo (inventario o panel) mientras se describen inventario, radiografías, mapa facial y finanzas.',
+      screen: 'Inicio de sesión en Dental-Demo como administrador de la clínica; listado de pacientes reflejados y página de Inventario con insumos y lotes.',
       narration:
-        'Dental-Demo agrega lo que la clínica necesita en su operación diaria: el inventario de insumos con lotes, vencimientos y movimientos, que DentalCloud usa cuando una prestación exige registrar el producto aplicado; las órdenes de radiografías; el mapa facial para tratamientos estéticos; y la parte financiera con cotizaciones, cobros y liquidaciones.',
+        'Ahora entramos a Dental-Demo como administrador de la clínica. Sus pacientes ya están aquí, con la misma información que se cargó en DentalCloud. Y Dental-Demo agrega lo que la clínica necesita en su operación diaria: el inventario de insumos con lotes, vencimientos y movimientos, que DentalCloud usa cuando una prestación exige registrar el producto aplicado; el mapa facial y la simulación estética; las cotizaciones y la cobranza; y las liquidaciones, los reportes y el marketing.',
       run: async (ctx) => {
+        await ctx.login('demo-admin');
+        if (/\/login/.test(ctx.page.url())) {
+          // Si el administrador aún no puede entrar, se muestra el panel de plataforma.
+          await ctx.login('demo');
+          await ctx.goto(`${ctx.dd}/admin-plataforma/resumen`);
+          await ctx.pause(3000);
+          return;
+        }
+        await ctx.goto(`${ctx.dd}/agenda/pacientes`);
+        await ctx.pause(9000);
+        await ctx.scroll(250);
+        await ctx.pause(2000);
         await ctx.goto(`${ctx.dd}/operaciones/inventario`);
-        await ctx.pause(4000);
-        if (/sin-autorizacion|login/.test(ctx.page.url())) await ctx.goto(`${ctx.dd}/admin-plataforma/resumen`);
-        await ctx.scroll(300);
+        await ctx.pause(3000);
+        if (/sin-autorizacion|login/.test(ctx.page.url())) await ctx.goto(`${ctx.dd}/dashboard`);
+        await ctx.scroll(250);
       },
     },
     {
@@ -385,7 +397,7 @@ export function buildScenes() {
       title: 'Todo conectado, sin doble trabajo',
       screen: 'Tarjeta de cierre con el resumen de beneficios.',
       narration:
-        'En resumen: con fordentcloud el holding crea y controla sus clínicas, cada clínica se configura en minutos, recepción y odontólogos trabajan sobre la misma ficha, y toda la información viaja sola a Dental-Demo, donde se completa con inventario, radiografías y finanzas. Una sola carga, dos plataformas siempre al día, y trazabilidad completa de cada paciente. Gracias por acompañarnos. Esto es fordentcloud.',
+        'En resumen: con fordentcloud el holding crea y controla sus clínicas, cada clínica se configura en minutos, recepción y odontólogos trabajan sobre la misma ficha, y toda la información viaja sola a Dental-Demo, donde se completa con inventario, cotizaciones, cobranza y finanzas. Una sola carga, dos plataformas siempre al día, y trazabilidad completa de cada paciente. Gracias por acompañarnos. Esto es fordentcloud.',
       run: (ctx) =>
         ctx.card('S24', {
           kicker: 'Cierre',

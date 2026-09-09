@@ -446,7 +446,11 @@ export function buildScenes() {
   return scenes;
 }
 
-/** Escenas del portal del paciente. Requieren PORTAL_URL en el .env; si falta, se omiten. */
+/**
+ * Escenas del portal del paciente. Requieren PORTAL_URL (variable de entorno); si falta, se omiten.
+ * El portal exige verificar el correo antes de entrar, así que se muestran sus pantallas de acceso y
+ * registro, el correo real que recibe el paciente al agendar, y un resumen de lo que ve una vez dentro.
+ */
 function portalScenes() {
   const url = (process.env.PORTAL_URL || '').trim();
   if (!url) return [];
@@ -456,26 +460,65 @@ function portalScenes() {
       section: 'Parte 5 · Portal del paciente',
       title: 'El portal del paciente',
       screen: 'Tarjeta de sección "fordentcloud · Portal del paciente".',
-      narration: 'Falta una pieza: el paciente. fordentcloud también le da su propio espacio, el portal del paciente, pensado para usarse desde el celular.',
+      narration:
+        'Falta una pieza: el paciente. fordentcloud también le da su propio espacio, el portal del paciente, pensado para usarse desde el celular. Desde ahí reserva sus horas, revisa sus citas, su presupuesto y sus pagos, sin llamar a la clínica.',
       run: (ctx) =>
         ctx.card('S30', {
           kicker: 'Parte 5',
           title: 'Portal del paciente',
-          subtitle: 'Reservar horas publicadas por los profesionales y revisar su información, desde cualquier dispositivo.',
+          subtitle: 'Reservar horas, ver citas, presupuesto y pagos, desde cualquier dispositivo.',
         }),
     },
     {
       id: 'S31',
       section: 'Parte 5 · Portal del paciente',
-      title: 'Reservar una hora desde el portal',
-      screen: 'Portal del paciente: ingreso, horas disponibles publicadas por los profesionales y reserva.',
+      title: 'Crear la cuenta del paciente',
+      screen: 'Portal del paciente: pantalla de ingreso y formulario "Registrarse" con RUT, correo y contraseña; se completa con los datos de la paciente sin enviarlo.',
       narration:
-        `En el portal, el paciente ingresa con sus datos y ve las horas que los profesionales publicaron desde su agenda diaria. Elige la que le acomoda y la reserva. Esa hora queda tomada de inmediato en la agenda de la clínica en ${HOLDING}, y la sincronización la lleva también a ${CLINICA}. Sin llamadas, sin esperas y sin riesgo de que dos personas tomen la misma hora.`,
+        `El paciente entra al portal y crea su cuenta con tres datos: su RUT, su correo y una contraseña. El sistema comprueba que ese RUT y ese correo coincidan con la ficha que la clínica creó en ${HOLDING}: no se puede registrar nadie que no sea paciente. Luego le llega un correo para confirmar su dirección, y con eso queda activo. Si olvida la contraseña, la recupera también por correo.`,
       run: async (ctx) => {
         await ctx.goto(ctx.portal);
-        await ctx.pause(6000);
-        await ctx.scroll(300);
+        await ctx.pause(5000);
+        await ctx.goto(`${ctx.portal.replace(/\/$/, '')}/registrarse`);
+        await ctx.pause(1500);
+        const rut = ctx.page.locator('#rut');
+        if (await rut.count()) {
+          await rut.pressSequentially(ctx.data.patient.rut, { delay: 60 });
+          await ctx.page.locator('#email').pressSequentially(ctx.data.patient.email, { delay: 30 });
+          await ctx.page.locator('#password').fill('Paciente2026!');
+        }
       },
+    },
+    {
+      id: 'S32',
+      section: 'Parte 5 · Portal del paciente',
+      title: 'Reservar una hora y recibir la confirmación',
+      screen: 'Correo real de confirmación que recibe el paciente al agendar desde el portal: clínica, profesional, fecha y hora.',
+      narration:
+        `Una vez dentro, en Agendar hora el paciente elige el profesional y el día, y ve solo las horas que ese profesional publicó desde su agenda. Toma la que le acomoda y la reserva. En ese instante la hora queda ocupada en la agenda de la clínica en ${HOLDING}, se refleja en ${CLINICA}, y el paciente recibe este correo de confirmación con la clínica, el profesional, la fecha y la hora. Nadie más puede tomar esa misma hora.`,
+      run: async (ctx) => {
+        await ctx.page.goto('file:///C:/Proyectos/fordentcloud-video/trabajo/titulos/correo-cita.html');
+        await ctx.pause(1000);
+      },
+    },
+    {
+      id: 'S33',
+      section: 'Parte 5 · Portal del paciente',
+      title: 'Lo que el paciente ve en su portal',
+      screen: 'Tarjeta resumen con las secciones del portal: Mis citas, Agendar hora, Mi perfil con Mi presupuesto, historial de pagos y descarga en PDF.',
+      narration:
+        'En Mis citas revisa sus atenciones pasadas y las próximas. En Mi perfil ve a los doctores de su clínica y su presupuesto: lo que debe, lo que ha abonado y lo que le falta por pagar, con cada abono registrado en la cartola, y puede descargar su presupuesto en PDF. Una campanita le avisa cuando se publican horas nuevas. Todo eso sale de la misma información que el equipo de la clínica ya cargó: el paciente no llena nada dos veces.',
+      run: (ctx) =>
+        ctx.card('S33', {
+          kicker: 'Portal del paciente',
+          title: 'Lo que el paciente ve',
+          bullets: [
+            'Mis citas: historial y próximas atenciones',
+            'Agendar hora: solo las horas publicadas por cada profesional',
+            'Mi perfil: doctores de la clínica y Mi presupuesto con historial de pagos',
+            'Descarga del presupuesto en PDF y avisos de horas nuevas',
+          ],
+        }),
     },
   ];
 }

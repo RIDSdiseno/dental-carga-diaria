@@ -20,9 +20,14 @@ import { config } from './config.js';
 const run = promisify(execFile);
 
 const DESKTOP = path.join(os.homedir(), 'OneDrive - rids.cl', 'Escritorio');
-const DEFAULT_REPOS = ['dentalcloud-front', 'dentalcloud-backend', 'Dental-Demo', 'Dental-Demo-Back'].map((name) =>
-  path.join(DESKTOP, name)
-);
+const DEFAULT_REPOS = [
+  'dentalcloud-front',
+  'dentalcloud-backend',
+  'Dental-Demo',
+  'Dental-Demo-Back',
+  'portal-paciente-front',
+  'portal-paciente-back',
+].map((name) => path.join(DESKTOP, name));
 
 async function git(cwd, args) {
   try {

@@ -66,7 +66,7 @@ export async function configureFederation(page, clinic, ctx) {
   const { config, log } = ctx;
   const detailUrl = `${config.dentalcloudUrl}/admin/clinicas/${clinic.id}`;
   if (!page.url().startsWith(detailUrl)) await page.goto(detailUrl, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('heading', { name: 'Federación con Dental-Demo' }).waitFor();
+  await page.getByRole('heading', { name: 'Federación con Dental-Demo' }).waitFor({ timeout: 60000 });
 
   const connectionLabel = `Conexión de ${clinic.name} con Dental-Demo`;
   const changed = await ensureSwitch(page, connectionLabel, true, { timeout: 90000 });
@@ -99,7 +99,7 @@ export async function enableAllModules(page, clinic, ctx) {
   const { config, log } = ctx;
   const detailUrl = `${config.dentalcloudUrl}/admin/clinicas/${clinic.id}`;
   if (!page.url().startsWith(detailUrl)) await page.goto(detailUrl, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('heading', { name: 'Módulos habilitados' }).waitFor();
+  await page.getByRole('heading', { name: 'Módulos habilitados' }).waitFor({ timeout: 60000 });
 
   await ensureSwitch(page, `Holding ${clinic.name} activo`, true);
 

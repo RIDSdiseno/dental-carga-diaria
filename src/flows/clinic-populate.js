@@ -12,7 +12,7 @@ import * as cartola from '../pages/cartola.js';
 import * as observaciones from '../pages/observaciones.js';
 import * as documentos from '../pages/documentos.js';
 import { eachItem } from './clinic-setup.js';
-import { closeOpenModals } from '../pages/_helpers.js';
+import { closeOpenModals, retry } from '../pages/_helpers.js';
 
 function sessionFor(browser, ctx, user, suffix) {
   return openSession(browser, {
@@ -141,7 +141,14 @@ export async function populateClinic(browser, clinic, ctx) {
     try {
       await eachItem(withCreatedPatient(clinic.ledger, 'ledger', ctx), 'ledger', ctx, (m) => cartola.addLedgerMovement(s.page, ctx.resolvePatient(m.patientKey), m, ctx), patientRef(ctx));
       await eachItem(withCreatedPatient(clinic.observations, 'observations', ctx), 'observations', ctx, (o) => observaciones.addObservation(s.page, ctx.resolvePatient(o.patientKey), o, ctx), patientRef(ctx));
-      await eachItem(withCreatedPatient(clinic.documents, 'documents', ctx), 'documents', ctx, (d) => documentos.uploadDocument(s.page, ctx.resolvePatient(d.patientKey), d, ctx), patientRef(ctx));
+      // La subida a Cloudinary a veces falla de forma transitoria ("No se pudo subir el archivo"): segundo intento inmediato.
+      await eachItem(
+        withCreatedPatient(clinic.documents, 'documents', ctx),
+        'documents',
+        ctx,
+        (d) => retry(() => documentos.uploadDocument(s.page, ctx.resolvePatient(d.patientKey), d, ctx), { attempts: 2, delayMs: 2000, log, label: 'documento' }),
+        patientRef(ctx)
+      );
     } finally {
       await s.close();
     }

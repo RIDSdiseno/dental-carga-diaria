@@ -60,6 +60,14 @@ export async function addObservation(page, patient, observation, ctx) {
       log.info(`Observación registrada para ${patient.rut}: "${text.slice(0, 60)}${text.length > 60 ? '…' : ''}"`);
       return true;
     }
+    // La web vacía el textarea al guardar: si ya está vacío, el guardado se confirmó aunque el
+    // historial tarde en mostrar el texto (o lo muestre recortado). No se reintenta para no duplicar.
+    if ((await textarea.inputValue().catch(() => text)) === '') {
+      const seen = await entry.waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+      if (!seen) log.warn(`Observación de ${patient.rut} guardada (formulario limpio), pero no se vio su texto en el historial.`);
+      log.info(`Observación registrada para ${patient.rut}: "${text.slice(0, 60)}${text.length > 60 ? '…' : ''}"`);
+      return true;
+    }
     await page.waitForTimeout(150);
   }
   throw new Error(`La observación no apareció en el historial de ${patient.rut} tras ${config.actionTimeoutMs} ms.`);

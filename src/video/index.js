@@ -26,7 +26,10 @@ fs.mkdirSync(workDir, { recursive: true });
 fs.mkdirSync(outDir, { recursive: true });
 
 const started = Date.now();
-const scenes = buildScenes();
+// La clínica y el paciente de demostración se eligen antes de la voz: la narración nombra a la clínica.
+const data = loadDemoClinic();
+console.log(`Clínica de demostración: ${data.clinic.name} (${data.runId}) · paciente: ${data.patient.firstName} ${data.patient.lastName}`);
+const scenes = buildScenes(data);
 console.log(`Escenas: ${scenes.length} · voz: ${voice}`);
 
 console.log('\n== 1/3 Narración ==');
@@ -41,8 +44,6 @@ if (skipRecord && fs.existsSync(timelinePath)) {
   recording = JSON.parse(fs.readFileSync(timelinePath, 'utf8'));
   console.log(`Reutilizando grabación: ${recording.rawPath}`);
 } else {
-  const data = loadDemoClinic();
-  console.log(`Clínica de demostración: ${data.clinic.name} · paciente: ${data.patient.firstName} ${data.patient.lastName}`);
   recording = await recordVideo({ scenes, audio, data, workDir });
   console.log(`Grabado: ${recording.rawPath} · ${recording.totalSeconds.toFixed(0)} s`);
 }

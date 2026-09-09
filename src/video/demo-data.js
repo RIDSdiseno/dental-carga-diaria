@@ -8,10 +8,19 @@ import { loadRegistry } from '../registry.js';
 
 const hasDone = (list, patientKey) => (list || []).some((item) => item.patientKey === patientKey && item.done);
 
+/**
+ * Selección por variables de entorno (opcionales):
+ *  VIDEO_RUN=2026-09-07_0845  VIDEO_CLINIC="Demo Dental Plaza Egaña"  VIDEO_PATIENT_RUT=20.285.921-6
+ */
 export function loadDemoClinic(preferredName = process.env.VIDEO_CLINIC || 'Demo Dental Las Palmas') {
   const registry = loadRegistry();
+  const preferredRun = (process.env.VIDEO_RUN || '').trim();
+  const preferredRut = (process.env.VIDEO_PATIENT_RUT || '').replace(/[^0-9kK]/g, '').toUpperCase();
   const candidates = registry.clinics.filter((c) => c.federated && c.status === 'completa' && c.id);
-  const entry = candidates.find((c) => c.name === preferredName) || candidates[candidates.length - 1];
+  const entry =
+    candidates.find((c) => c.name === preferredName && (!preferredRun || c.runId === preferredRun)) ||
+    candidates.find((c) => c.name === preferredName) ||
+    candidates[candidates.length - 1];
   if (!entry) throw new Error('No hay clínicas completas en el registro para grabar el video.');
 
   const planPath = path.join(config.dirs.reports, entry.runId, 'plan.json');
@@ -29,16 +38,38 @@ export function loadDemoClinic(preferredName = process.env.VIDEO_CLINIC || 'Demo
       hasDone(clinic.consultationPayments, p.key)
   );
   const withPhoto = complete.filter((p) => p.photoPath);
-  const patient = withPhoto[0] || complete[0] || (clinic.patients || []).find((p) => p.id);
+  const forced = preferredRut ? (clinic.patients || []).find((p) => p.id && p.rut.replace(/[^0-9kK]/g, '').toUpperCase() === preferredRut) : null;
+  const patient = forced || withPhoto[0] || complete[0] || (clinic.patients || []).find((p) => p.id);
   if (!patient) throw new Error(`La clínica ${clinic.name} no tiene pacientes creados.`);
 
   const dentist = (clinic.users || []).find((u) => u.key === patient.userKey && u.done) || (clinic.users || []).find((u) => u.role === 'odontologo' && u.done);
   const operator = (clinic.users || []).find((u) => u.role === 'operador' && u.done);
   const professionalWithSchedule = (clinic.users || []).find((u) => u.done && (clinic.schedules || []).some((s) => s.userKey === u.key && s.done)) || dentist;
 
+  // Día de la semana actual (lunes a domingo) con más citas creadas, para que la agenda no salga vacía.
+  const today = new Date();
+  const todayKey = today.toISOString().slice(0, 10);
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const counts = new Map();
+  for (const a of clinic.appointments || []) {
+    if (!a.done) continue;
+    const d = new Date(`${a.date}T12:00:00`);
+    const diff = Math.round((d - monday) / 86400000);
+    if (diff >= 0 && diff <= 6) counts.set(a.date, (counts.get(a.date) || 0) + 1);
+  }
+  let agendaDay = null;
+  for (const [date, n] of counts) {
+    if (!agendaDay || n > agendaDay.count || (n === agendaDay.count && date >= todayKey && agendaDay.date < todayKey)) {
+      const d = new Date(`${date}T12:00:00`);
+      agendaDay = { date, count: n, day: d.getDate(), offsetDays: Math.round((d - new Date(`${todayKey}T12:00:00`)) / 86400000) };
+    }
+  }
+
   return {
     runId: entry.runId,
     clinic,
+    agendaDay,
     admin: clinic.admin,
     dentist,
     operator: operator || clinic.admin,

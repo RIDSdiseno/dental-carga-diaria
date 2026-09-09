@@ -44,6 +44,7 @@ export async function recordVideo({ scenes, audio, data, workDir, log = console 
     dc: config.dentalcloudUrl,
     dd: config.dentalDemoUrl,
     portal: (process.env.PORTAL_URL || '').trim(),
+    cardsDir,
     openModal: false,
     pause: (ms) => page.waitForTimeout(ms),
     goto: async (url) => {

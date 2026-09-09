@@ -7,10 +7,13 @@
 // narration (texto literal de la voz) y run(ctx) con las acciones sobre la web real.
 // ctx: { page, data, dc, dd, portal, login(role), goto(url), tab(label), card(id, {...}), scroll(px), pause(ms), dismissDebt() }
 
+import { writeEmailCard } from './titles.js';
+
 const HOLDING = 'la plataforma del holding';
 const CLINICA = 'la plataforma de la clínica';
 
-export function buildScenes() {
+export function buildScenes(data = {}) {
+  const CLINIC_NAME = data.clinic?.name || 'Demo Dental Las Palmas';
   const scenes = [
     {
       id: 'S01',
@@ -58,9 +61,9 @@ export function buildScenes() {
       id: 'S04',
       section: 'Parte 1 · Plataforma del holding',
       title: 'Ficha del holding y conexión entre plataformas',
-      screen: 'Detalle del holding "Demo Dental Las Palmas": sección de conexión con la plataforma de la clínica, interruptor principal y conexiones individuales.',
+      screen: `Detalle del holding "${CLINIC_NAME}": sección de conexión con la plataforma de la clínica, interruptor principal y conexiones individuales.`,
       narration:
-        `Abrimos la clínica Demo Dental Las Palmas. En su ficha está la sección de conexión con ${CLINICA}. Este interruptor enlaza las dos plataformas. Cuando está activo, cada paciente, cada cita, cada presupuesto, los profesionales, las sucursales y el catálogo se copian automáticamente. Las conexiones individuales permiten decidir exactamente qué información se comparte, y cada sucursal puede conectarse por separado.`,
+        `Abrimos la clínica ${CLINIC_NAME}. En su ficha está la sección de conexión con ${CLINICA}. Este interruptor enlaza las dos plataformas. Cuando está activo, cada paciente, cada cita, cada presupuesto, los profesionales, las sucursales y el catálogo se copian automáticamente. Las conexiones individuales permiten decidir exactamente qué información se comparte, y cada sucursal puede conectarse por separado.`,
       run: async (ctx) => {
         await ctx.goto(`${ctx.dc}/admin/clinicas`);
         const row = ctx.page.locator('tr').filter({ has: ctx.page.getByText(ctx.data.clinic.name, { exact: true }) }).first();
@@ -110,6 +113,15 @@ export function buildScenes() {
         await ctx.goto(`${ctx.dc}/agenda`);
         await ctx.page.getByRole('heading', { name: 'Agenda general' }).waitFor({ timeout: 60000 });
         await ctx.pause(2500);
+        // Ir a un día de la semana con citas (las pestañas dicen "Lun 10 Sep").
+        const day = ctx.data.agendaDay;
+        if (day && day.offsetDays !== 0) {
+          const tab = ctx.page.getByRole('button', { name: new RegExp(`^[A-Za-zÁÉÍÓÚáéíóú]{3} ${day.day} `) }).first();
+          if (await tab.count()) {
+            await tab.click();
+            await ctx.pause(2500);
+          }
+        }
         await ctx.scroll(350);
       },
     },
@@ -122,7 +134,16 @@ export function buildScenes() {
         'La Agenda diaria muestra la jornada de cada profesional. Y trae una función nueva: Agregar horas disponibles. El profesional publica horas sueltas, sin paciente todavía, y esas horas quedan a disposición de recepción y del portal del paciente, donde la propia persona puede tomarlas. Si dos personas intentan la misma hora a la vez, el sistema solo permite una reserva.',
       run: async (ctx) => {
         await ctx.goto(`${ctx.dc}/agenda/diaria`);
-        await ctx.pause(3500);
+        await ctx.pause(2500);
+        // Mover la agenda al día de la semana con citas, con los botones "Día siguiente" / "Día anterior".
+        const day = ctx.data.agendaDay;
+        const steps = day ? Math.min(6, Math.abs(day.offsetDays)) : 0;
+        const label = day && day.offsetDays < 0 ? 'Día anterior' : 'Día siguiente';
+        for (let i = 0; i < steps; i++) {
+          await ctx.page.getByRole('button', { name: label, exact: true }).click().catch(() => undefined);
+          await ctx.pause(700);
+        }
+        await ctx.pause(2000);
         await ctx.scroll(250);
       },
     },
@@ -373,11 +394,11 @@ export function buildScenes() {
       id: 'S24',
       section: 'Parte 4 · Plataforma de la clínica',
       title: 'La clínica reflejada',
-      screen: 'Listado de clínicas de la plataforma; se abre "Demo Dental Las Palmas" con sus datos sincronizados.',
+      screen: `Listado de clínicas de la plataforma; se abre "${CLINIC_NAME}" con sus datos sincronizados.`,
       narration:
-        `En el listado de clínicas encontramos Demo Dental Las Palmas, la misma que configuramos en ${HOLDING}. Su ficha ya trae las sucursales, los profesionales, el catálogo de prestaciones, las previsiones, los convenios, los pacientes y sus citas. La sincronización es automática y funciona en ambos sentidos: lo que se corrige en una plataforma se refleja en la otra.`,
+        `En el listado de clínicas encontramos ${CLINIC_NAME}, la misma que configuramos en ${HOLDING}. Su ficha ya trae las sucursales, los profesionales, el catálogo de prestaciones, las previsiones, los convenios, los pacientes y sus citas. La sincronización es automática y funciona en ambos sentidos: lo que se corrige en una plataforma se refleja en la otra.`,
       run: async (ctx) => {
-        await ctx.goto(`${ctx.dd}/clinicas`);
+        await ctx.goto(`${ctx.dd}/admin-plataforma/clinicas`);
         await ctx.pause(3500);
         const search = ctx.page.getByPlaceholder(/buscar/i).first();
         if (await search.count()) {
@@ -497,7 +518,19 @@ function portalScenes() {
       narration:
         `Una vez dentro, en Agendar hora el paciente elige el profesional y el día, y ve solo las horas que ese profesional publicó desde su agenda. Toma la que le acomoda y la reserva. En ese instante la hora queda ocupada en la agenda de la clínica en ${HOLDING}, se refleja en ${CLINICA}, y el paciente recibe este correo de confirmación con la clínica, el profesional, la fecha y la hora. Nadie más puede tomar esa misma hora.`,
       run: async (ctx) => {
-        await ctx.page.goto('file:///C:/Proyectos/fordentcloud-video/trabajo/titulos/correo-cita.html');
+        // Correo con los datos reales de la paciente, su odontólogo y su clínica.
+        const p = ctx.data.patient;
+        const appt = (ctx.data.clinic.appointments || []).find((a) => a.patientKey === p.key && a.done);
+        const when = appt ? new Date(`${appt.date}T${appt.time}:00`) : new Date(Date.now() + 2 * 86400000);
+        const url = writeEmailCard(ctx.cardsDir, {
+          patientFirstName: p.firstName.split(' ')[0],
+          professionalName: ctx.data.dentist?.name || 'Odontólogo tratante',
+          clinicaNombre: ctx.data.clinic.name,
+          dateLabel: when.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+          timeLabel: appt ? appt.time : '10:30',
+          to: p.email,
+        });
+        await ctx.page.goto(url);
         await ctx.pause(1000);
       },
     },

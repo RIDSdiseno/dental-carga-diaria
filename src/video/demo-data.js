@@ -66,10 +66,17 @@ export function loadDemoClinic(preferredName = process.env.VIDEO_CLINIC || 'Demo
     }
   }
 
+  // Clínicas adicionales para la sección "dental, estética o ambas".
+  const extra = {
+    estetica: loadClinicBundle(registry, { tipo: 'estetica', name: process.env.VIDEO_CLINIC_ESTETICA || 'Demo Clínica Sonrisas del Sur', runId: process.env.VIDEO_RUN_ESTETICA || '2026-09-07_0845' }),
+    ambas: loadClinicBundle(registry, { tipo: 'ambas', name: process.env.VIDEO_CLINIC_AMBAS || 'Demo Clínica Estética Facial Providencia', runId: process.env.VIDEO_RUN_AMBAS || '2026-09-08_0845' }),
+  };
+
   return {
     runId: entry.runId,
     clinic,
     agendaDay,
+    extra,
     admin: clinic.admin,
     dentist,
     operator: operator || clinic.admin,
@@ -83,6 +90,25 @@ export function loadDemoClinic(preferredName = process.env.VIDEO_CLINIC || 'Demo
       payments: (clinic.consultationPayments || []).filter((c) => c.done).length,
     },
   };
+}
+
+/**
+ * Clínica adicional de un tipo dado (estetica | ambas) con su administrador, un odontólogo,
+ * un paciente creado (con presupuesto si existe) y una prestación estética del catálogo.
+ */
+export function loadClinicBundle(registry, { tipo, name, runId }) {
+  const entries = registry.clinics.filter((c) => c.federated && c.status === 'completa' && c.id && c.tipo === tipo);
+  const entry = entries.find((c) => c.name === name && c.runId === runId) || entries.find((c) => c.name === name) || entries[entries.length - 1];
+  if (!entry) return null;
+  const plan = JSON.parse(fs.readFileSync(path.join(config.dirs.reports, entry.runId, 'plan.json'), 'utf8'));
+  const clinic = plan.clinics.find((c) => c.key === entry.key);
+  if (!clinic) return null;
+  const created = (clinic.patients || []).filter((p) => p.id);
+  const withPlan = created.find((p) => hasDone(clinic.treatmentPlans, p.key) && p.photoPath) || created.find((p) => hasDone(clinic.treatmentPlans, p.key));
+  const patient = withPlan || created.find((p) => p.photoPath) || created[0];
+  const dentist = (clinic.users || []).find((u) => u.key === patient?.userKey && u.done) || (clinic.users || []).find((u) => u.role === 'odontologo' && u.done);
+  const estheticPrestacion = (clinic.prestaciones || []).find((p) => p.category === 'estetica' && p.done && /hialur/i.test(p.name)) || (clinic.prestaciones || []).find((p) => p.category === 'estetica' && p.done);
+  return { runId: entry.runId, clinic, admin: clinic.admin, dentist, patient, estheticPrestacion };
 }
 
 // Uso directo: node src/video/demo-data.js

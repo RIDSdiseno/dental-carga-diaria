@@ -37,6 +37,14 @@ export async function recordVideo({ scenes, audio, data, workDir, log = console 
     // La federación crea en Dental-Demo al administrador de la clínica con el mismo correo y contraseña.
     'demo-admin': { base: config.dentalDemoUrl, email: data.admin.email, password: config.defaultUserPassword(), selectors: 'dd' },
   };
+  // Clínicas adicionales para la sección "dental, estética o ambas".
+  for (const [kind, bundle] of Object.entries(data.extra || {})) {
+    if (!bundle) continue;
+    creds[`admin-${kind}`] = { base: config.dentalcloudUrl, email: bundle.admin.email, password: config.defaultUserPassword(), selectors: 'dc' };
+    if (bundle.dentist) {
+      creds[`odontologo-${kind}`] = { base: config.dentalcloudUrl, email: bundle.dentist.email, password: config.defaultUserPassword(), selectors: 'dc' };
+    }
+  }
 
   const ctx = {
     page,
@@ -52,7 +60,11 @@ export async function recordVideo({ scenes, audio, data, workDir, log = console 
       await page.waitForLoadState('networkidle').catch(() => undefined);
     },
     tab: async (label) => {
-      await page.getByRole('button', { name: label, exact: true }).click();
+      // La barra de pestañas se desplaza en horizontal: la última pestaña puede quedar fuera de cuadro.
+      const btn = page.getByRole('button', { name: label, exact: true });
+      await btn.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(250);
+      await btn.click();
     },
     scroll: async (px) => {
       const steps = Math.max(1, Math.round(px / 80));

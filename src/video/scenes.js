@@ -8,6 +8,7 @@
 // ctx: { page, data, dc, dd, portal, login(role), goto(url), tab(label), card(id, {...}), scroll(px), pause(ms), dismissDebt() }
 
 import { writeEmailCard } from './titles.js';
+import { escapeRegExp } from '../pages/_helpers.js';
 
 const HOLDING = 'la plataforma del holding';
 const CLINICA = 'la plataforma de la clínica';
@@ -364,21 +365,199 @@ export function buildScenes(data = {}) {
       },
     },
     {
+      id: 'S26',
+      section: 'Parte 4 · Dental, estética o ambas',
+      title: 'Una plataforma por tipo de clínica',
+      screen: 'Tarjeta de sección "Dental, estética o ambas".',
+      narration:
+        'Hasta aquí vimos una clínica dental. Pero fordentcloud se adapta al tipo de cada clínica: puede ser dental, de estética facial, o las dos cosas a la vez. Según lo que sea, la plataforma cambia: cambia el catálogo, cambian las pantallas de la ficha y cambia la forma de armar un presupuesto.',
+      run: (ctx) =>
+        ctx.card('S26', {
+          kicker: 'Parte 4',
+          title: 'Dental, estética o ambas',
+          subtitle: 'Cada clínica se crea con su tipo y la plataforma se adapta: catálogo, ficha y presupuestos.',
+        }),
+    },
+    {
+      id: 'S27',
+      section: 'Parte 4 · Dental, estética o ambas',
+      title: 'El tipo se elige al crear la clínica',
+      screen: 'Listado de holdings mostrando la columna Tipo (Dental, Estética facial, Dental y estética); se abre "Crear holding" y se despliega el selector Tipo con sus tres opciones.',
+      narration:
+        'El tipo se define al crear la clínica, con tres opciones: Dental, Estética facial, o Dental y estética. En el listado del holding se ve de inmediato qué es cada una. Y no es solo una etiqueta: de esa elección depende todo lo que el equipo verá después.',
+      run: async (ctx) => {
+        await ctx.login('superadmin');
+        await ctx.goto(`${ctx.dc}/admin/clinicas`);
+        await ctx.page.getByRole('heading', { name: 'Holdings' }).waitFor({ timeout: 60000 });
+        await ctx.pause(3500);
+        await ctx.page.getByRole('button', { name: 'Crear holding' }).click();
+        const dlg = ctx.page.locator('div.fixed.inset-0').filter({ has: ctx.page.getByRole('heading', { level: 2, name: 'Crear holding' }) }).last();
+        await dlg.waitFor();
+        await ctx.pause(2500);
+        const tipo = dlg.locator('#clinica-tipo');
+        await tipo.scrollIntoViewIfNeeded();
+        for (const value of ['estetica', 'ambas', 'dental']) {
+          await tipo.selectOption(value);
+          await ctx.pause(1600);
+        }
+        ctx.openModal = true;
+      },
+      after: closeModal,
+    },
+    {
+      id: 'S28',
+      section: 'Parte 4 · Dental, estética o ambas',
+      title: 'Clínica de estética: catálogo y examen estético',
+      screen: `Clínica "${data.extra?.estetica?.clinic?.name || 'de estética'}": catálogo con tratamientos faciales, y ficha del paciente en la pestaña "Examen Estético" con evaluación, registro fotográfico y diagnóstico.`,
+      narration:
+        'Esta es una clínica de estética facial. Su catálogo no tiene obturaciones ni endodoncias: tiene toxina botulínica, ácido hialurónico, bioestimuladores e hilos tensores, cada uno con su precio. Y la ficha del paciente suma una pestaña propia, Examen Estético: tipo de piel, fototipo, arrugas, flacidez, volumen, asimetrías y otros hallazgos. Debajo, el registro fotográfico con cuatro tomas, frontal, perfil y las dos de cuarenta y cinco grados, y el diagnóstico, que el profesional puede dictar con su voz.',
+      run: async (ctx) => {
+        const b = ctx.data.extra?.estetica;
+        if (!b) return;
+        await ctx.login('admin-estetica');
+        await ctx.goto(`${ctx.dc}/catalogo`);
+        await ctx.page.getByRole('heading', { name: 'Catálogo' }).waitFor({ timeout: 60000 });
+        await ctx.pause(6000);
+        await ctx.scroll(300);
+        await ctx.pause(2500);
+        await ctx.goto(`${ctx.dc}/pacientes/${b.patient.id}`);
+        await ctx.page.getByRole('button', { name: 'Datos paciente' }).waitFor({ timeout: 60000 });
+        await ctx.dismissDebt();
+        await ctx.tab('Examen Estético');
+        await ctx.page.getByRole('heading', { name: 'Evaluación estética' }).waitFor({ timeout: 60000 });
+        await ctx.pause(2500);
+        // Se completa la evaluación en vivo: así la pantalla no queda en "No especificado".
+        const campos = [
+          ['Tipo de piel', 'mixta'],
+          ['Fototipo Fitzpatrick', 'III'],
+          ['Arrugas', 'dinamicas'],
+          ['Flacidez', 'leve'],
+          ['Volumen', 'deficit'],
+          ['Asimetrías', 'si'],
+        ];
+        for (const [label, value] of campos) {
+          await ctx.page.getByLabel(label, { exact: true }).selectOption(value).catch(() => undefined);
+          await ctx.pause(700);
+        }
+        const hallazgos = ctx.page.getByLabel('Otros hallazgos', { exact: true });
+        if (await hallazgos.count()) await hallazgos.pressSequentially('Leve asimetría de comisura labial derecha.', { delay: 35 });
+        await ctx.pause(1200);
+        // Registro fotográfico y diagnóstico. Los recuadros de foto NO se pulsan:
+        // abren el selector de archivos del sistema y arruinarían la grabación.
+        await ctx.page.getByRole('heading', { name: 'Registro fotográfico' }).scrollIntoViewIfNeeded();
+        await ctx.pause(3000);
+        await ctx.page.getByRole('heading', { name: 'Diagnóstico' }).scrollIntoViewIfNeeded();
+        const diag = ctx.page.getByPlaceholder('Escribe o dicta el diagnóstico con el micrófono...');
+        if (await diag.count()) await diag.pressSequentially('Envejecimiento facial leve. Tercio superior con arrugas dinámicas y déficit de volumen malar.', { delay: 22 });
+        // El micrófono solo se señala: el dictado por voz no funciona en el navegador de grabación.
+        await ctx.page.getByRole('button', { name: 'Dictar diagnóstico por voz' }).hover().catch(() => undefined);
+        await ctx.pause(1500);
+        await ctx.page.getByRole('button', { name: 'Guardar examen', exact: true }).click().catch(() => undefined);
+        await ctx.pause(2000);
+      },
+    },
+    {
+      id: 'S29',
+      section: 'Parte 4 · Dental, estética o ambas',
+      title: 'Clínica de estética: presupuesto con mapa facial',
+      screen: 'Asistente "Nuevo presupuesto" de la clínica de estética: en el paso de prestaciones aparece el mapa facial del rostro en vez del odontograma; se elige un tratamiento y se marca la zona.',
+      narration:
+        'Y al armar un presupuesto, en lugar del odontograma aparece el mapa facial. El profesional elige el tratamiento, por ejemplo ácido hialurónico en labios, y marca directamente la zona del rostro: frente, entrecejo, pómulos, labios, mentón o cuello. El mapa tiene acercamiento, capas, vista de perfil y deshacer. Cada zona queda en el presupuesto con su precio, y se pueden adjuntar las fotos de antes y después.',
+      run: async (ctx) => {
+        const b = ctx.data.extra?.estetica;
+        if (!b) return;
+        if (b.dentist) await ctx.login('odontologo-estetica');
+        await ctx.goto(`${ctx.dc}/pacientes/${b.patient.id}`);
+        await ctx.page.getByRole('button', { name: 'Datos paciente' }).waitFor({ timeout: 60000 });
+        await ctx.dismissDebt();
+        await ctx.tab('Tratamientos');
+        await ctx.page.getByRole('heading', { name: 'Presupuestos' }).waitFor({ timeout: 60000 });
+        await ctx.pause(2000);
+        await ctx.page.getByRole('button', { name: 'Nuevo presupuesto', exact: true }).click();
+        const dlg = ctx.page.locator('div.fixed.inset-0').filter({ has: ctx.page.getByRole('heading', { level: 2, name: 'Nuevo presupuesto' }) }).last();
+        await dlg.waitFor();
+        ctx.openModal = true;
+        await ctx.pause(4000);
+        // Paso 1 → paso 2 (prestaciones sobre el mapa facial).
+        await dlg.getByRole('button', { name: 'Siguiente', exact: true }).first().click().catch(() => undefined);
+        await ctx.pause(3500);
+        // Elegir una prestación estética y marcar una zona del rostro.
+        const search = dlg.getByPlaceholder(/destartraje|prestaci|buscar/i).first();
+        if (await search.count()) {
+          await search.pressSequentially(b.estheticPrestacion?.name?.slice(0, 18) || 'Ácido hialurónico', { delay: 70 });
+          await ctx.pause(1800);
+          const option = dlg.getByRole('button', { name: new RegExp(escapeRegExp(b.estheticPrestacion?.name || 'Ácido'), 'i') }).first();
+          if (await option.count()) {
+            await option.click().catch(() => undefined);
+            await ctx.pause(2500);
+          }
+        }
+        for (const zone of ['Labios', 'Nasogenianos', 'Pómulos']) {
+          const z = dlg.getByRole('button', { name: zone, exact: true }).first();
+          if (await z.count()) {
+            await z.click().catch(() => undefined);
+            await ctx.pause(1600);
+          }
+        }
+        await ctx.pause(2000);
+      },
+      after: closeModal,
+    },
+    {
+      id: 'S30',
+      section: 'Parte 4 · Dental, estética o ambas',
+      title: 'Clínica mixta: lo dental y lo estético juntos',
+      screen: `Clínica "${data.extra?.ambas?.clinic?.name || 'mixta'}": catálogo con prestaciones dentales y estéticas, y el asistente de presupuesto con el selector Odontograma / Mapa facial.`,
+      narration:
+        'Y si la clínica atiende las dos cosas, tiene todo junto. Su catálogo mezcla prestaciones dentales y estéticas, y cada una se clasifica al crearla. En el presupuesto, el profesional decide con qué diagrama trabajar: odontograma para lo dental, mapa facial para lo estético, en el mismo asistente y para el mismo paciente. Una sola ficha, una sola cuenta corriente, y cada tratamiento registrado donde corresponde.',
+      run: async (ctx) => {
+        const b = ctx.data.extra?.ambas;
+        if (!b) return;
+        await ctx.login('admin-ambas');
+        await ctx.goto(`${ctx.dc}/catalogo`);
+        await ctx.page.getByRole('heading', { name: 'Catálogo' }).waitFor({ timeout: 60000 });
+        await ctx.pause(5500);
+        await ctx.scroll(300);
+        await ctx.pause(2000);
+        // Asistente de presupuesto: selector Odontograma / Mapa facial (solo en clínicas mixtas).
+        await ctx.goto(`${ctx.dc}/pacientes/${b.patient.id}`);
+        await ctx.page.getByRole('button', { name: 'Datos paciente' }).waitFor({ timeout: 60000 });
+        await ctx.dismissDebt();
+        await ctx.tab('Tratamientos');
+        await ctx.page.getByRole('heading', { name: 'Presupuestos' }).waitFor({ timeout: 60000 });
+        await ctx.pause(1500);
+        await ctx.page.getByRole('button', { name: 'Nuevo presupuesto', exact: true }).click();
+        const dlg = ctx.page.locator('div.fixed.inset-0').filter({ has: ctx.page.getByRole('heading', { level: 2, name: 'Nuevo presupuesto' }) }).last();
+        await dlg.waitFor();
+        ctx.openModal = true;
+        await ctx.pause(3000);
+        for (const label of ['Mapa facial', 'Odontograma']) {
+          const btn = dlg.getByRole('button', { name: label, exact: true }).first();
+          if (await btn.count()) {
+            await btn.click().catch(() => undefined);
+            await ctx.pause(2600);
+          }
+        }
+        await ctx.pause(1500);
+      },
+      after: closeModal,
+    },
+    {
       id: 'S22',
-      section: 'Parte 4 · Plataforma de la clínica',
+      section: 'Parte 5 · Plataforma de la clínica',
       title: 'La plataforma de la clínica',
       screen: 'Tarjeta de sección "fordentcloud · Plataforma de la clínica".',
       narration: `Hasta aquí, todo lo cargamos en ${HOLDING}. Ahora abrimos ${CLINICA} para comprobar qué pasó con esa información.`,
       run: (ctx) =>
         ctx.card('S22', {
-          kicker: 'Parte 4',
+          kicker: 'Parte 5',
           title: 'Plataforma de la clínica',
           subtitle: 'La misma información, ya sincronizada, más inventario, cotizaciones, cobranza y finanzas.',
         }),
     },
     {
       id: 'S23',
-      section: 'Parte 4 · Plataforma de la clínica',
+      section: 'Parte 5 · Plataforma de la clínica',
       title: 'Panel de plataforma',
       screen: 'Inicio de sesión en la plataforma de la clínica; panel de plataforma con el resumen de clínicas y actividad.',
       narration:
@@ -392,7 +571,7 @@ export function buildScenes(data = {}) {
     },
     {
       id: 'S24',
-      section: 'Parte 4 · Plataforma de la clínica',
+      section: 'Parte 5 · Plataforma de la clínica',
       title: 'La clínica reflejada',
       screen: `Listado de clínicas de la plataforma; se abre "${CLINIC_NAME}" con sus datos sincronizados.`,
       narration:
@@ -417,7 +596,7 @@ export function buildScenes(data = {}) {
     },
     {
       id: 'S25',
-      section: 'Parte 4 · Plataforma de la clínica',
+      section: 'Parte 5 · Plataforma de la clínica',
       title: 'Lo que agrega la plataforma de la clínica',
       screen: 'Inicio de sesión como administrador de la clínica; listado de pacientes reflejados y página de Inventario con insumos y lotes.',
       narration:
@@ -477,22 +656,22 @@ function portalScenes() {
   if (!url) return [];
   return [
     {
-      id: 'S30',
-      section: 'Parte 5 · Portal del paciente',
+      id: 'S40',
+      section: 'Parte 6 · Portal del paciente',
       title: 'El portal del paciente',
       screen: 'Tarjeta de sección "fordentcloud · Portal del paciente".',
       narration:
         'Falta una pieza: el paciente. fordentcloud también le da su propio espacio, el portal del paciente, pensado para usarse desde el celular. Desde ahí reserva sus horas, revisa sus citas, su presupuesto y sus pagos, sin llamar a la clínica.',
       run: (ctx) =>
-        ctx.card('S30', {
-          kicker: 'Parte 5',
+        ctx.card('S40', {
+          kicker: 'Parte 6',
           title: 'Portal del paciente',
           subtitle: 'Reservar horas, ver citas, presupuesto y pagos, desde cualquier dispositivo.',
         }),
     },
     {
-      id: 'S31',
-      section: 'Parte 5 · Portal del paciente',
+      id: 'S41',
+      section: 'Parte 6 · Portal del paciente',
       title: 'Crear la cuenta del paciente',
       screen: 'Portal del paciente: pantalla de ingreso y formulario "Registrarse" con RUT, correo y contraseña; se completa con los datos de la paciente sin enviarlo.',
       narration:
@@ -511,8 +690,8 @@ function portalScenes() {
       },
     },
     {
-      id: 'S32',
-      section: 'Parte 5 · Portal del paciente',
+      id: 'S42',
+      section: 'Parte 6 · Portal del paciente',
       title: 'Reservar una hora y recibir la confirmación',
       screen: 'Correo real de confirmación que recibe el paciente al agendar desde el portal: clínica, profesional, fecha y hora.',
       narration:
@@ -535,14 +714,14 @@ function portalScenes() {
       },
     },
     {
-      id: 'S33',
-      section: 'Parte 5 · Portal del paciente',
+      id: 'S43',
+      section: 'Parte 6 · Portal del paciente',
       title: 'Lo que el paciente ve en su portal',
       screen: 'Tarjeta resumen con las secciones del portal: Mis citas, Agendar hora, Mi perfil con Mi presupuesto, historial de pagos y descarga en PDF.',
       narration:
         'En Mis citas revisa sus atenciones pasadas y las próximas. En Mi perfil ve a los doctores de su clínica y su presupuesto: lo que debe, lo que ha abonado y lo que le falta por pagar, con cada abono registrado en la cartola, y puede descargar su presupuesto en PDF. Una campanita le avisa cuando se publican horas nuevas. Todo eso sale de la misma información que el equipo de la clínica ya cargó: el paciente no llena nada dos veces.',
       run: (ctx) =>
-        ctx.card('S33', {
+        ctx.card('S43', {
           kicker: 'Portal del paciente',
           title: 'Lo que el paciente ve',
           bullets: [
